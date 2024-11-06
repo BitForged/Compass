@@ -1,6 +1,7 @@
 <script setup>
-import { getMyJobs } from "@/services/UserService";
+import {deleteImage, getMyJobs} from "@/services/UserService";
 import {onMounted, ref} from "vue";
+import {useAlertStore} from "@/stores/alerts";
 
 const jobs = ref([]);
 
@@ -11,6 +12,23 @@ function getImageForJob(job) {
 function onImageClick(job) {
   console.log(`Clicked on image for job ${job.id}`);
   window.open(getImageForJob(job), "_blank").focus();
+}
+
+function onDeleteClick(job) {
+  console.log(`Clicked on delete for job ${job.id}`);
+  deleteImage(job.id).then((res) => {
+    if(res.status !== 204) {
+      console.error(`Failed to delete image for job ${job.id}`, res);
+      useAlertStore().addAlert(`Failed to delete image with ID: ${job.id}`, "error");
+      return;
+    }
+    console.log(`Deleted image for job ${job.id}`);
+    jobs.value = jobs.value.filter(j => j.id !== job.id);
+    useAlertStore().addAlert(`Image deleted successfully`, "success");
+  }).catch((error) => {
+    console.error(`Failed to delete image for job ${job.id}`, error);
+    useAlertStore().addAlert(`Failed to delete image with ID: ${job.id}`, "error");
+  });
 }
 
 onMounted(async () => {
@@ -41,6 +59,9 @@ onMounted(async () => {
         <div class="card-body">
           <h2>{{job.id}}</h2>
           <img @click="onImageClick(job)" class="job-image" width="512" :src="getImageForJob(job)" alt="Job Image">{{job.description}}</img>
+          <div class="card-actions justify-end">
+            <button @click="onDeleteClick(job)" class="btn btn-error">Delete</button>
+          </div>
         </div>
       </div>
     </div>
