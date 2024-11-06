@@ -59,6 +59,7 @@ deploy_to_prod:
     - echo "VITE_API_BASE=$API_BASE" > .env
     - echo "VITE_DISCORD_CLIENT_ID=$DISCORD_CLIENT_ID" >> .env
     - echo "VITE_BASE_URL=$BASE_URL" >> .env
+    - echo "VITE_DISCORD_REDIRECT_URI=$DISCORD_REDIRECT_URI" >> .env
 
   script:
     - echo "Preparing to deploy to production"
