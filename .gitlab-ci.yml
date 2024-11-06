@@ -1,0 +1,77 @@
+image:
+  name: node:21-bookworm
+  entrypoint: [""]
+
+stages:
+  - build
+  - deploy
+
+cache:
+  key: ${CI_PIPELINE_ID}
+  paths:
+    - node_modules/
+
+variables:
+  #  CI_DEBUG_TRACE: "true"
+  NODE_ENV: "production"
+  VITE_DISCORD_CLIENT_ID: $DISCORD_CLIENT_ID
+  VITE_API_BASE: $API_BASE
+  VITE_BASE_URL: $BASE_URL
+ensure_site_builds:
+  stage: build
+  tags:
+    - system86
+  script:
+    - set -x
+    - npm ci
+    - npm run build
+  artifacts:
+    paths:
+      - dist/
+
+deploy_to_prod:
+  stage: deploy
+  only:
+    - main
+  tags:
+    - system86
+  dependencies:
+    - ensure_site_builds
+  before_script:
+    - echo "Ensuring ssh/ssh-agent and rsync are installed on the container..."
+    - 'command -v ssh-agent >/dev/null || ( apt-get update -y && apt-get install openssh-client -y)'
+    - 'command -v rsync >/dev/null || ( apt-get update -y && apt-get install rsync -y)'
+
+    # Start the SSH Agent inside the container
+    - echo "Initializing SSH Agent"
+    - eval $(ssh-agent -s)
+
+    # Adds the private SSH key to the current container
+    - echo "Adding private SSH keys to ssh-agent..."
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+
+    # Create the .ssh directory and create the known_hosts file
+    - echo "Creating SSH dirs..."
+    - mkdir -p ~/.ssh
+    - touch ~/.ssh/known_hosts
+
+    # Ensure the host key of the target server is in the container's known hosts file
+    - echo "Discovering target host server keys..."
+    - ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" >> ~/.ssh/known_hosts
+
+    # Generate a .env file for the production environment, and fill it with the necessary environment variables
+    - echo "Generating .env file for production..."
+    - echo "VITE_API_BASE=$API_BASE" > .env
+    - echo "VITE_DISCORD_CLIENT_ID=$DISCORD_CLIENT_ID" >> .env
+    - echo "VITE_BASE_URL=$BASE_URL" >> .env
+    - echo "NODE_ENV=production" >> .env
+
+  script:
+    - echo "Preparing to deploy to production"
+    - echo "Building now...!"
+    - npm ci
+    - npm run build
+    - echo "Deploying to production..."
+    # This will synchronize the contents of the dist/ folder with the target server (removing the old build in the process)
+    - rsync -avz -e "ssh -p $SSH_PORT" --delete dist/* $SSH_USER@$SSH_HOST:$SSH_PATH
+    - echo "Deployment to production complete! Visit $BASE_URL to see the changes."
