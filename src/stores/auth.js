@@ -29,6 +29,18 @@ export const useAuthStore = defineStore('auth', () => {
         if(forced) {
             useAlertStore().addAlert("You have been logged out due to your session being invalid.", "warning")
         }
+        this.$router.push("/").then(() => {});
+    }
+
+    function verifyTokenIsStillValid() {
+        if(!isLoggedIn()) {
+            return
+        }
+        requestUser().then((_) => {}).catch(() => {
+            logout(true)
+        })
+
+        this.$router.push("/").then(() => {});
     }
 
     function isLoggedIn() {
@@ -42,5 +54,5 @@ export const useAuthStore = defineStore('auth', () => {
         return `https://cdn.discordapp.com/avatars/${user.value.id}/${user.value.avatar}.png`
     }
 
-    return {user, token, isLoggedIn, login, logout, getAvatarUrl}
+    return {user, token, isLoggedIn, login, logout, getAvatarUrl, verifyTokenIsStillValid}
 })
