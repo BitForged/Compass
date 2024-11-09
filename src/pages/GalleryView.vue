@@ -5,6 +5,9 @@ import {useAlertStore} from "@/stores/alerts";
 
 const jobs = ref([]);
 
+const pendingDeleteId = ref("");
+const pendingDeleteTimeoutId = ref(null);
+
 function getImageForJob(job) {
   return `${import.meta.env.VITE_API_BASE}/api/images/${job.id}`;
 }
@@ -29,6 +32,20 @@ function onDeleteClick(job) {
     console.error(`Failed to delete image for job ${job.id}`, error);
     useAlertStore().addAlert(`Failed to delete image with ID: ${job.id}`, "error");
   });
+}
+
+function isPendingDelete(job) {
+  return pendingDeleteId.value === job.id;
+}
+
+function setPendingDelete(job) {
+  if(pendingDeleteTimeoutId.value) {
+    clearTimeout(pendingDeleteTimeoutId.value);
+  }
+  pendingDeleteId.value = job.id;
+  pendingDeleteTimeoutId.value = setTimeout(() => {
+    pendingDeleteId.value = "";
+  }, 2500);
 }
 
 onMounted(async () => {
@@ -60,7 +77,8 @@ onMounted(async () => {
           <h2>{{job.id}}</h2>
           <img @click="onImageClick(job)" class="job-image" width="512" :src="getImageForJob(job)" alt="Job Image">{{job.description}}</img>
           <div class="card-actions justify-end">
-            <button @click="onDeleteClick(job)" class="btn btn-error">Delete</button>
+            <button v-if="!isPendingDelete(job)" @click="setPendingDelete(job)" class="btn btn-warning">Delete?</button>
+            <button v-else @click="onDeleteClick(job)" class="btn btn-error btn-delete">Confirm!</button>
           </div>
         </div>
       </div>
@@ -72,6 +90,10 @@ onMounted(async () => {
 .card-border {
   border: 1px dashed oklch(var(--a));
   border-radius: 0.375rem;
+}
+
+.btn-delete {
+  color: white;
 }
 
 .job-image {
