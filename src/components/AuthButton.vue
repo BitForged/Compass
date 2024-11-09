@@ -12,7 +12,8 @@ const btnStyle = computed(() => {
     "btn": true,
     "btn-outline": true,
     "btn-primary": !authStore.isLoggedIn(),
-    "btn-error": authStore.isLoggedIn()
+    "btn-error": authStore.isLoggedIn(),
+    "discord-btn": !authStore.isLoggedIn(),
   }
 });
 
@@ -35,10 +36,29 @@ async function toggleAuth() {
 
 <template>
   <button :class="btnStyle" @click="toggleAuth">
+    <img v-if="!authStore.isLoggedIn()" src="https://cdn.prod.website-files.com/6257adef93867e50d84d30e2/636e0a6cc3c481a15a141738_icon_clyde_white_RGB.png" width="24" height="24" alt="Discord logo"/>
     {{authStore.isLoggedIn() ? `Logout of ${authStore.user.global_name}` : "Login via Discord"}}
   </button>
 </template>
 
 <style scoped>
+
+.discord-btn {
+  background-color: #7289DA;
+  color: white;
+}
+
+@media (prefers-color-scheme: dark) {
+  .discord-btn {
+    background-color: #5865F2;
+  }
+}
+
+@media(hover: hover) {
+  .discord-btn:hover {
+    background-color: #5865F2;
+    color: white;
+  }
+}
 
 </style>
