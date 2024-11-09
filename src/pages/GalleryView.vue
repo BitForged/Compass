@@ -72,7 +72,7 @@ onMounted(async () => {
       <p>Click on an image to view it in full size.</p>
     </div>
     <div class="grid grid-cols-4 gap-4">
-      <div v-for="job in jobs" :key="job.id" class="card card-border bordered col-auto hover:animate-pulse">
+      <div v-for="job in jobs" :key="job.id" class="card card-custom bordered col-auto hover:animate-pulse">
         <div class="card-body">
           <h2>{{job.id}}</h2>
           <img @click="onImageClick(job)" class="job-image" width="512" :src="getImageForJob(job)" alt="Job Image">{{job.description}}</img>
@@ -87,9 +87,13 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.card-border {
-  border: 1px dashed oklch(var(--a));
-  border-radius: 0.375rem;
+.card-custom {
+  background-color: #3C3A36;
+  box-shadow: 0px 0px 15px rgba(255, 215, 215, 0.013), 0px 0px 30px rgba(173, 216, 230, 0.1), 0px 6px 10px rgba(0, 0, 0, 0.4);
+  /*box-shadow: 0px 0px 15px rgba(255, 153, 153, 0.25),
+  0px 0px 30px rgba(255, 102, 102, 0.15),
+  0px 6px 10px rgba(0, 0, 0, 0.4);*/
+  color: white;
 }
 
 .btn-delete {
