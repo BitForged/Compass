@@ -74,8 +74,9 @@ onMounted(async () => {
     <div class="grid grid-cols-4 gap-4">
       <div v-for="job in jobs" :key="job.id" class="card card-custom bordered col-auto hover:animate-pulse">
         <div class="card-body">
-          <h2>{{job.id}}</h2>
-          <img @click="onImageClick(job)" class="job-image" width="512" :src="getImageForJob(job)" alt="Job Image">{{job.description}}</img>
+          <div class="image-container">
+            <img @click="onImageClick(job)" class="job-image" width="512" :src="getImageForJob(job)" alt="Job Image">{{job.description}}</img>
+          </div>
           <div class="card-actions justify-end">
             <button v-if="!isPendingDelete(job)" @click="setPendingDelete(job)" class="btn btn-warning">Delete?</button>
             <button v-else @click="onDeleteClick(job)" class="btn btn-error btn-delete">Confirm!</button>
@@ -100,9 +101,43 @@ onMounted(async () => {
   color: white;
 }
 
-.job-image {
+/*.job-image {
   cursor: pointer;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: inset 0px 0px 5px rgba(255, 255, 255, 0.15);
+
+}*/
+
+.image-container {
+  position: relative; /* Set position to relative for absolute positioning of the overlay */
+  display: inline-block;
+  overflow: hidden;
+  border-radius: 8px; /* Optional: Gives the image rounded corners */
 }
+
+.image-container::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.05));
+  pointer-events: none; /* Allows interaction with the image underneath */
+}
+
+.image-container img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 8px; /* Ensures the image matches the container's rounded corners */
+  transition: transform 0.3s ease;
+  &:hover {
+    transform: scale(1.05);
+  }
+}
+
 
 .stat-custom {
   background-color: oklch(var(--n));
