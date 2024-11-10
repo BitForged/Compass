@@ -3,25 +3,42 @@ import {ref} from "vue";
 
 export const useAlertStore = defineStore('alerts', () => {
     const alerts = ref([])
-
+    const activeAlert = ref(null)
+    let timeoutId = null
     function addAlert(message, type = 'info') {
-        let alert = {message, type}
-        alerts.value.push(alert)
+        let id = Math.random().toString(36).substring(2, 15)
+        let alert = {message, type, id}
         console.log(alert)
-        setTimeout(() => removeAlert(alert), 5000)
+
+        if(!activeAlert.value) {
+            setActiveAlert(alert)
+        } else {
+            alerts.value.push(alert)
+        }
     }
 
-    function removeAlert(alert) {
-        delete alerts.value.shift()
-        console.log("Removed alert")
+    function removeAlert() {
+        if(activeAlert.value) {
+            clearTimeout(timeoutId);
+            activeAlert.value = null
+            timeoutId = null;
+            const nextAlert = alerts.value.shift()
+            if(nextAlert) {
+                setActiveAlert(nextAlert)
+            }
+        }
+    }
+
+    function setActiveAlert(alert) {
+        activeAlert.value = alert
+        timeoutId = setTimeout(() => {
+            removeAlert()
+        }, 5000)
     }
 
     function getFirstAlert() {
-        if(alerts.value.length === 0) {
-            return null
-        }
-        return alerts.value[0]
+        return activeAlert.value
     }
 
-    return {alerts, addAlert, removeAlert, getFirstAlert}
+    return {addAlert, getFirstAlert}
 })

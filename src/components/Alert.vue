@@ -16,6 +16,7 @@ const alertClass = computed(() => {
   return {
     "alert": true,
     "alert-error": alertStore.getFirstAlert().type === 'error',
+    "alert-error-custom": alertStore.getFirstAlert().type === 'error',
     "alert-info": alertStore.getFirstAlert().type === 'info',
     "alert-warning": alertStore.getFirstAlert().type === 'warning',
     "alert-success": alertStore.getFirstAlert().type === 'success'
@@ -78,5 +79,7 @@ const isAlertVisible = computed(() => {
 </template>
 
 <style scoped>
-
+.alert-error-custom {
+  color: #fff;
+}
 </style>
