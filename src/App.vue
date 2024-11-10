@@ -16,7 +16,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div>
+  <div class="w-full max-w-full">
     <NavigationBar />
     <div class="p-4">
       <Alert />
@@ -27,4 +27,7 @@ onMounted(() => {
 </template>
 
 <style scoped>
+body {
+  overflow-x: hidden;
+}
 </style>

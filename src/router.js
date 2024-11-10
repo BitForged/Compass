@@ -4,10 +4,12 @@ import HomeView from "./pages/HomeView.vue";
 import {useAuthStore} from "@/stores/auth";
 import {useAlertStore} from "@/stores/alerts";
 import GalleryView from "@/pages/GalleryView.vue";
+import GenerateView from "@/pages/GenerateView.vue";
 
 const routes = [
     { path: '/', component: HomeView },
     { path: '/gallery', component: GalleryView, meta:{ requiresAuth: true } },
+    { path: '/generate', component: GenerateView, meta:{ requiresAuth: true } },
 ];
 
 export const router = createRouter({
