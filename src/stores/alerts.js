@@ -33,7 +33,7 @@ export const useAlertStore = defineStore('alerts', () => {
         activeAlert.value = alert
         timeoutId = setTimeout(() => {
             removeAlert()
-        }, 5000)
+        }, 2500)
     }
 
     function getFirstAlert() {
