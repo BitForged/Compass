@@ -1,43 +1,80 @@
 <script setup>
-
 import AuthButton from "@/components/AuthButton.vue";
-import {RouterLink} from "vue-router";
-import {useAuthStore} from "@/stores/auth";
+import { RouterLink } from "vue-router";
+import { useAuthStore } from "@/stores/auth";
+import {computed} from "vue";
+import {useAlertStore} from "@/stores/alerts";
 
 const authStore = useAuthStore();
+
+const isDev = import.meta.env.VITE_DEV || false;
+
+const isDevMode = computed(() => {
+  return isDev;
+});
+
+const promptComingSoon = () => {
+  useAlertStore().addAlert("This feature is coming soon!", "info");
+};
 </script>
 
 <template>
-  <div class="navbar bg-base-100">
-    <div class="flex-1">
-      <RouterLink to="/" class="btn btn-ghost text-xl">Compass</RouterLink>
-      <ul v-if="authStore.isLoggedIn()" class="menu menu-horizontal">
-        <RouterLink to="/gallery" class="btn btn-ghost">Gallery</RouterLink>
-      </ul>
-    </div>
-    <div class="flex-none float-right right-0">
-      <ul class="menu menu-horizontal px-1">
-<!--        <li><a>Login via Discord</a></li>-->
-        <AuthButton />
-        <div v-if="authStore.isLoggedIn()" class="avatar pl-2">
-          <div class="rounded-full w-10 h-10 m-1">
-            <img :src="authStore.getAvatarUrl()" alt="avatar" />
-          </div>
+  <div class="navbar">
+    <div class="navbar-start">
+      <div class="dropdown">
+        <div tabindex="0" role="button" class="btn btn-ghost lg:hidden">
+          <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor">
+            <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 6h16M4 12h8m-8 6h16" />
+          </svg>
         </div>
+        <ul tabindex="0" class="menu menu-sm dropdown-content bg-base-100 rounded-box z-[1] mt-3 w-52 p-2 shadow">
+          <li>
+            <RouterLink to="/gallery" class="btn btn-ghost">Gallery</RouterLink>
+          </li>
+          <li>
+            <RouterLink v-if="isDevMode" to="/generate" class="btn btn-ghost disabled">Generate</RouterLink>
+            <span v-else @click="promptComingSoon" class="btn btn-ghost disabled">Generate</span>
+          </li>
+          <li>
+            <AuthButton />
+          </li>
+        </ul>
+      </div>
+      <RouterLink to="/" class="btn btn-ghost text-xl">Compass</RouterLink>
+    </div>
+    <div class="navbar-center hidden lg:flex">
+      <ul class="menu menu-horizontal px-1">
         <li>
-<!--          <details>-->
-<!--            <summary>Parent</summary>-->
-<!--            <ul class="bg-base-100 rounded-t-none p-2">-->
-<!--              <li><a>Link 1</a></li>-->
-<!--              <li><a>Link 2</a></li>-->
-<!--            </ul>-->
-<!--          </details>-->
+          <RouterLink to="/gallery" class="btn btn-ghost">Gallery</RouterLink>
+        </li>
+        <li>
+          <RouterLink v-if="isDevMode" to="/generate" class="btn btn-ghost">Generate</RouterLink>
+          <span v-else @click="promptComingSoon" class="btn btn-ghost disabled">Generate</span>
         </li>
       </ul>
+    </div>
+    <div class="navbar-end hidden lg:flex">
+      <AuthButton />
+      <div v-if="authStore.isLoggedIn()" class="avatar pl-2">
+        <div class="rounded-full w-12 h-12 m-1">
+          <img :src="authStore.getAvatarUrl()" alt="avatar" class="w-full h-full object-cover" />
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-
+.navbar {
+  max-width: 100%;
+}
 </style>
