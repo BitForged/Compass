@@ -10,6 +10,7 @@ variables:
   #  CI_DEBUG_TRACE: "true"
   VITE_DISCORD_CLIENT_ID: $DISCORD_CLIENT_ID
   VITE_API_BASE: $API_BASE
+  VITE_RT_API_BASE: $API_RT_BASE
   VITE_BASE_URL: $BASE_URL
 ensure_site_builds:
   stage: build

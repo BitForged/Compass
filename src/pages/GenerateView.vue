@@ -9,7 +9,7 @@ const imageParams = ref({
   width: 1024,
   height: 1024,
   options: {
-    prompt: "Lasagna baking in the oven",
+    prompt: "",
     negative_prompt: "",
     model: {},
     sampler: {},
