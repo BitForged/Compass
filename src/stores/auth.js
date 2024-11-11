@@ -49,7 +49,6 @@ export const useAuthStore = defineStore('auth', () => {
             logout(true)
         })
 
-        this.$router.push("/").then(() => {});
     }
 
     function isLoggedIn() {

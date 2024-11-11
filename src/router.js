@@ -13,7 +13,7 @@ const routes = [
 ];
 
 export const router = createRouter({
-    history: createWebHistory(),
+    history: createWebHistory(import.meta.env.BASE_URL),
     routes,
 });
 
@@ -22,18 +22,17 @@ router.beforeEach((to, from, next) => {
     const authStore = useAuthStore();
     const alertStore = useAlertStore();
     const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
-    if(!to.matched.length > 0) {
+    if(!to.matched.length) {
         console.log("No route found, redirecting to /");
+        alertStore.addAlert("That page does not exist.", "error");
         next("/");
         return;
     }
-    if(requiresAuth) {
-        if(!authStore.isLoggedIn()) {
-            console.log("User is not logged in, redirecting to /");
-            alertStore.addAlert("You must be logged in to access that page.", "error");
-            next("/");
-            return;
-        }
+    if(requiresAuth && !authStore.isLoggedIn()) {
+        console.log("User is not logged in, redirecting to /");
+        alertStore.addAlert("You must be logged in to access that page.", "error");
+        next("/");
+    } else {
+        next();
     }
-    next();
 });
