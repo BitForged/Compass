@@ -25,6 +25,8 @@ const currentProgress = ref(null);
 
 const maxProgress = ref(100);
 
+const isInitialConnection = ref(true);
+
 const progressText = ref("Nothing to report yet...");
 
 const currentJobId = ref(null);
@@ -195,6 +197,21 @@ const onRemoteModelChanging = (data) => {
   }
 }
 
+const onDisconnect = () => {
+  console.error("Navigator RT disconnected, attempting to reconnect...");
+  useAlertStore().addAlert("Navigator RT disconnected, attempting to reconnect...", "error");
+  navigatorRt.connect();
+};
+
+const onConnect = () => {
+  if(isInitialConnection.value) {
+    isInitialConnection.value = false;
+    return;
+  }
+  console.log("Navigator RT reconnected!");
+  useAlertStore().addAlert("Navigator RT reconnected!", "success");
+};
+
 
 watch(showTipsModal, (newValue) => {
   toggleBodyScroll(newValue);
@@ -239,6 +256,8 @@ onMounted(() => {
   navigatorRt.on("task-progress", onJobProgress);
   navigatorRt.on("task-finished", onJobFinished);
   navigatorRt.on("model-changed", onRemoteModelChanging);
+  navigatorRt.on("connect", onConnect);
+  navigatorRt.on("disconnect", onDisconnect);
 });
 
 onUnmounted(() => {
@@ -246,6 +265,8 @@ onUnmounted(() => {
   navigatorRt.off("task-progress", onJobProgress);
   navigatorRt.off("task-finished", onJobFinished);
   navigatorRt.off("model-changed", onRemoteModelChanging);
+  navigatorRt.off("connect", onConnect);
+  navigatorRt.off("disconnect", onDisconnect);
 });
 </script>
 
