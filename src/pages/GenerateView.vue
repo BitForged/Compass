@@ -27,11 +27,20 @@ const maxProgress = ref(100);
 
 const isInitialConnection = ref(true);
 
+const isModelChanging = ref(false);
+
 const progressText = ref("Nothing to report yet...");
 
 const currentJobId = ref(null);
 
+const isGenSettingsExpanded = ref(true);
+
 const progressClasses = computed(() => {
+  if(isModelChanging.value) {
+    return {
+      "progress-warning": true,
+    };
+  }
   if(currentProgress.value === null) {
     return {
     };
@@ -168,6 +177,7 @@ const sendJobToNavigator = () => {
 const onJobProgress = (data) => {
   console.log(data);
   if(data.job_id === currentJobId.value) {
+    isModelChanging.value = false;
     currentProgress.value = data.current_step;
     maxProgress.value = data.total_steps;
     progressText.value = "Generating image... " + data.current_step + "/" + data.total_steps;
@@ -193,7 +203,8 @@ const onRemoteModelChanging = (data) => {
   console.log("Remote model changed", data);
   if(data.job_id === currentJobId.value) {
     progressText.value = "Model change in progress...";
-    currentProgress.value = 0;
+    currentProgress.value = null;
+    isModelChanging.value = true;
   }
 }
 
@@ -205,6 +216,7 @@ const onDisconnect = () => {
 
 const onConnect = () => {
   if(isInitialConnection.value) {
+    console.log("Navigator RT connected (first connect, notification disabled)!");
     isInitialConnection.value = false;
     return;
   }
@@ -299,8 +311,9 @@ onUnmounted(() => {
     </div>
     <div class="mt-5">
       <label class="form-control border border-opacity-50 border-gray-500 cornered">
-        <span class="label ms-2">Generation Settings</span>
-        <div class="m-3">
+        <span v-if="isGenSettingsExpanded" @click="isGenSettingsExpanded = !isGenSettingsExpanded" class="label ms-2">Generation Settings</span>
+        <span v-else @click="isGenSettingsExpanded = !isGenSettingsExpanded" class="label ms-2">Generation Settings (Hidden; Click to expand)</span>
+        <div v-if="isGenSettingsExpanded" class="m-3">
           <div class="form-control">
             <label class="label">Target Width</label>
             <div class="grid grid-cols-12 gap-4">
@@ -370,7 +383,7 @@ onUnmounted(() => {
       <div class="generated-image-container col-span-12 md:col-span-10">
         <label class="form-control border border-opacity-50 border-gray-500 cornered">
           <span class="label ms-2">Results</span>
-          <img id="job-image" src="https://via.placeholder.com/800x600" alt="Generated Image" class="m-3 w-1/2" />
+          <img id="job-image" src="" alt="Generated Image" class="m-3 w-1/2" />
         </label>
       </div>
       <div class="generated-image-metadata-container col-span-12 md:col-span-2 pt-0 m-3 md:pt-10">
