@@ -18,6 +18,7 @@
     "postcss": "^8.4.47",
     "socket.io-client": "^4.8.1",
     "tailwindcss": "^3.4.14",
+    "v-lazy-image": "^2.1.1",
     "vue": "^3.5.12",
     "vue-router": "^4.4.5"
   },

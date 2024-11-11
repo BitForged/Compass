@@ -2,6 +2,7 @@
 import {deleteImage, getMyJobs} from "@/services/UserService";
 import {onMounted, ref} from "vue";
 import {useAlertStore} from "@/stores/alerts";
+import VLazyImage from "v-lazy-image";
 
 const jobs = ref([]);
 
@@ -10,6 +11,10 @@ const pendingDeleteTimeoutId = ref(null);
 
 function getImageForJob(job) {
   return `${import.meta.env.VITE_API_BASE}/api/images/${job.id}`;
+}
+
+function getPreviewForJob(job) {
+  return `${import.meta.env.VITE_API_BASE}/api/previews/${job.id}`;
 }
 
 function onImageClick(job) {
@@ -75,7 +80,8 @@ onMounted(async () => {
       <div v-for="job in jobs" :key="job.id" class="card card-custom bordered col-auto hover:animate-pulse">
         <div class="card-body">
           <div class="image-container">
-            <img @click="onImageClick(job)" class="job-image" width="512" :src="getImageForJob(job)" alt="Job Image">{{job.description}}</img>
+<!--            <img @click="onImageClick(job)" class="job-image" width="512" :src="getImageForJob(job)" alt="Job Image">{{job.description}}</img>-->
+            <v-lazy-image @click="onImageClick(job)" class="job-image" :src-placeholder="getPreviewForJob(job)" :src="getImageForJob(job)" width="512" alt="Job Image" />
           </div>
           <div class="card-actions justify-end">
             <button v-if="!isPendingDelete(job)" @click="setPendingDelete(job)" class="btn btn-warning">Delete?</button>
