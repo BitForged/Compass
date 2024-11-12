@@ -367,10 +367,16 @@ const copyImageLink = () => {
 const onUpscaleClick = () => {
   console.log("Upscaling image");
   recallLastJob(() => {
-    imageParams.value.width = lastJob.value.width * 2;
-    imageParams.value.height = lastJob.value.height * 2;
+    const originalWidth = lastJob.value.width;
+    const originalHeight = lastJob.value.height;
+    imageParams.value.width = originalWidth * 2;
+    imageParams.value.height = originalHeight * 2;
     setTimeout(() => {
       sendJobToNavigator();
+      setTimeout(() => {
+        imageParams.value.width = originalWidth;
+        imageParams.value.height = originalHeight;
+      }, 1000);
     }, 1500);
   });
 }
@@ -378,8 +384,10 @@ const onUpscaleClick = () => {
 const onRecallUpscaleClick = () => {
   console.log("Recalling and upscaling image");
   recallJobParameters(recalledImageId.value, () => {
-    const upscaledWidth = imageParams.value.width * 2;
-    const upscaledHeight = imageParams.value.height * 2;
+    const originalWidth = imageParams.value.width;
+    const originalHeight = imageParams.value.height;
+    const upscaledWidth = originalWidth * 2;
+    const upscaledHeight = originalHeight * 2;
     if((upscaledWidth * upscaledHeight) > (2560 * 1440)) {
       useAlertStore().addAlert("Upscaled image exceeds maximum resolution, so this image is unfortunately not eligible for upscaling.", "error");
       return;
@@ -388,6 +396,10 @@ const onRecallUpscaleClick = () => {
     imageParams.value.height = upscaledHeight;
     setTimeout(() => {
       sendJobToNavigator();
+      setTimeout(() => {
+        imageParams.value.width = originalWidth;
+        imageParams.value.height = originalHeight;
+      }, 1000);
     }, 1500);
   });
 }
@@ -619,7 +631,7 @@ onUnmounted(() => {
             <button :disabled="!lastJob || lastJob.status !== 'completed'" @click="saveLastJobImage" class="btn btn-success w-full relative"><oh-vue-icon animation="float" class="absolute w-24 size-6 -translate-y-1/2 left-4" name="fa-download"/>Download Image</button>
             <button :disabled="!lastJob || lastJob.status !== 'completed'" @click="copyImageLink" class="btn btn-info w-full mt-2 relative"><oh-vue-icon class="absolute size-7 w-24 -translate-y-1/2 left-4" animation="wrench" name="hi-clipboard-copy"/>Copy Image Link</button>
             <button v-if="!isDeletePending" :disabled="!lastJob || lastJob.status !== 'completed'" @click="onDeleteClick" class="btn btn-error w-full mt-2 relative"><oh-vue-icon class="absolute top-1/2 size-7 w-24 -translate-y-1/2 left-4" name="md-deleteforever"/>Delete Image</button>
-            <button v-else :disabled="!lastJob || lastJob.status !== 'completed'" @click="onDeleteClick" class="btn btn-error w-full mt-2 relative"><oh-vue-icon class="absolute size-6 w-24 -translate-y-1/2 left-4" name="md-deleteforever"/><strong>Click To Confirm</strong></button>
+            <button v-else :disabled="!lastJob || lastJob.status !== 'completed'" @click="onDeleteClick" class="btn btn-error w-full mt-2 relative"><oh-vue-icon class="absolute size-7 top-1/2 w-24 -translate-y-1/2 left-4" name="md-deleteforever"/><strong>Click To Confirm</strong></button>
             <button :disabled="!lastJob || lastJob.status !== 'completed'" @click="recallLastJob" class="btn btn-primary w-full mt-2 relative"><oh-vue-icon class="absolute size-6 w-24 -translate-y-1/2 left-4" animation="spin" name="md-replaycirclefilled"/> Recall Parameters</button>
             <button :disabled="!lastJob || lastJob.status !== 'completed' || !isEligibleForUpscale" @click="onUpscaleClick" class="btn btn-secondary w-full mt-2 relative"><oh-vue-icon class="absolute size-6 w-24 -translate-y-1/2 left-4" animation="pulse" name="fa-angle-double-up"/>Recall & Upscale 2x</button>
           </div>
