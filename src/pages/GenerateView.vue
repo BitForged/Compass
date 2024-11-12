@@ -5,6 +5,8 @@ import {generateTxt2Img, getAvailableModels, getAvailableSamplers, getImageInfo}
 import {useAlertStore} from "@/stores/alerts";
 import SizePreviewBox from "@/components/SizePreviewBox.vue";
 import {useRouter} from "vue-router";
+import {saveAs} from "file-saver";
+import {deleteImage} from "@/services/UserService";
 
 const router = useRouter();
 
@@ -26,13 +28,19 @@ const isWorking = ref(false);
 
 const recalledImageId = ref(null);
 
+const isRecalledImageEligibleForUpscale = ref(false);
+
 const currentProgress = ref(null);
 
 const maxProgress = ref(100);
 
 const isInitialConnection = ref(true);
 
+const isDeletePending = ref(false);
+
 const isModelChanging = ref(false);
+
+const lastJob = ref(null);
 
 const progressText = ref("Nothing to report yet...");
 
@@ -90,6 +98,11 @@ const isImageParamsValid = computed(() => {
   }
   return typeof imageParams.value.options.seed === 'number';
 
+});
+
+const isEligibleForUpscale = computed(() => {
+  if(!lastJob.value) return false;
+  return ((lastJob.value.width * 2) * (lastJob.value.height * 2)) <= (2560 * 1440);
 });
 
 const getLinkForJobId = (jobId) => {
@@ -177,6 +190,7 @@ const sendJobToNavigator = () => {
       console.log("Sent image request to Navigator", resp.data);
       currentJobId.value = resp.data.job_id;
       progressText.value = "Job queued, waiting for results...";
+      lastJob.value = { ... job, status: 'queued', job_id: resp.data.job_id };
       // TODO: Handle queue status
     }).catch((error) => {
       console.error("Failed to generate image from Navigator", error);
@@ -188,6 +202,28 @@ const sendJobToNavigator = () => {
   }
 };
 
+const saveLastJobImage = () => {
+  if(lastJob.value && lastJob.value.img_path) {
+    console.log("Downloading image", lastJob.value);
+    saveAs(`${import.meta.env.VITE_API_BASE}${lastJob.value.img_path}`, `generated-image-${lastJob.value.job_id}.png`);
+  } else {
+    console.error("No image to download");
+    useAlertStore().addAlert("No image to download, please generate an image first!", "error");
+  }
+};
+
+const getImageForJob = computed(() => {
+  if(!lastJob.value) return null;
+  const job = lastJob.value;
+  if(job.img_path) {
+    return `${import.meta.env.VITE_API_BASE}${job.img_path}`;
+  } else if(job.progress_path) {
+    return `${import.meta.env.VITE_API_BASE}${job.progress_path}?step=${job.current_step}`;
+  } else {
+    return null;
+  }
+});
+
 const onJobProgress = (data) => {
   console.log(data);
   if(data.job_id === currentJobId.value) {
@@ -195,7 +231,15 @@ const onJobProgress = (data) => {
     currentProgress.value = data.current_step;
     maxProgress.value = data.total_steps;
     progressText.value = "Generating image... " + data.current_step + "/" + data.total_steps;
-    document.getElementById("job-image").src = `${import.meta.env.VITE_API_BASE}${data.progress_path}?step=${data.current_step}`;
+    lastJob.value = {
+      ...lastJob.value,
+      job_id: data.job_id,
+      progress_path: data.progress_path,
+      current_step: data.current_step,
+      total_steps: data.total_steps,
+      status: 'in_progress',
+    };
+    // document.getElementById("job-image").src = `${import.meta.env.VITE_API_BASE}${data.progress_path}?step=${data.current_step}`;
   }
 };
 
@@ -205,8 +249,13 @@ const onJobFinished = (data) => {
     currentProgress.value = null;
     progressText.value = "Job completed!";
     currentJobId.value = null;
-    document.getElementById("job-image").src = `${import.meta.env.VITE_API_BASE}${data.img_path}`;
+    // document.getElementById("job-image").src = `${import.meta.env.VITE_API_BASE}${data.img_path}`;
     isWorking.value = false;
+    lastJob.value = {
+      ...lastJob.value,
+      img_path: data.img_path,
+      status: 'completed',
+    }
     setTimeout(() => {
       progressText.value = "Nothing to report yet...";
     }, 3000);
@@ -238,6 +287,31 @@ const onConnect = () => {
   useAlertStore().addAlert("Navigator RT reconnected!", "success");
 };
 
+const onDeleteClick = () => {
+  console.log("Clicked on delete for job", lastJob.value.job_id);
+  if(isDeletePending.value) {
+    deleteImage(lastJob.value.job_id).then((res) => {
+      if(res.status !== 204) {
+        console.error(`Failed to delete image for job ${lastJob.value.job_id}`, res);
+        useAlertStore().addAlert(`Failed to delete image with ID: ${lastJob.value.job_id}`, "error");
+        return;
+      }
+      console.log(`Deleted image for job ${lastJob.value.job_id}`);
+      lastJob.value = null;
+      useAlertStore().addAlert(`Image deleted successfully`, "success");
+      isDeletePending.value = false;
+    }).catch((error) => {
+      console.error(`Failed to delete image for job ${lastJob.value.job_id}`, error);
+      useAlertStore().addAlert(`Failed to delete image with ID: ${lastJob.value.job_id}`, "error");
+    });
+  } else {
+    isDeletePending.value = true;
+    setTimeout(() => {
+      isDeletePending.value = false;
+    }, 2500);
+  }
+}
+
 const extractModelNameFromInfo = (infoText) => {
   // Regular expression to match the "Model: " pattern followed by the model name
   const modelRegex = /Model: ([^,\n]+)/;
@@ -265,7 +339,58 @@ const extractSizeFromInfo = (infoText) => {
   }
 }
 
-const recallJobParameters = (imageId) => {
+const recallLastJob = (cb) => {
+  if(!lastJob.value) {
+    console.error("No last job to recall");
+    useAlertStore().addAlert("No last job to recall, please generate an image first!", "error");
+    return;
+  }
+  if(cb) {
+    recallJobParameters(lastJob.value.job_id, cb);
+  } else {
+    recallJobParameters(lastJob.value.job_id);
+  }
+}
+
+const copyImageLink = () => {
+  if(lastJob.value && lastJob.value.img_path) {
+    navigator.clipboard.writeText(`${import.meta.env.VITE_API_BASE}${lastJob.value.img_path}`);
+    useAlertStore().addAlert("Image link copied to clipboard!", "success");
+  } else {
+    console.error("No image link to copy");
+    useAlertStore().addAlert("No image link to copy, please generate an image first!", "error");
+  }
+}
+
+const onUpscaleClick = () => {
+  console.log("Upscaling image");
+  recallLastJob(() => {
+    imageParams.value.width = lastJob.value.width * 2;
+    imageParams.value.height = lastJob.value.height * 2;
+    setTimeout(() => {
+      sendJobToNavigator();
+    }, 1500);
+  });
+}
+
+const onRecallUpscaleClick = () => {
+  console.log("Recalling and upscaling image");
+  recallJobParameters(recalledImageId.value, () => {
+    const upscaledWidth = imageParams.value.width * 2;
+    const upscaledHeight = imageParams.value.height * 2;
+    if((upscaledWidth * upscaledHeight) > (2560 * 1440)) {
+      useAlertStore().addAlert("Upscaled image exceeds maximum resolution, so this image is unfortunately not eligible for upscaling.", "error");
+      return;
+    }
+    imageParams.value.width = upscaledWidth;
+    imageParams.value.height = upscaledHeight;
+    setTimeout(() => {
+      sendJobToNavigator();
+    }, 1500);
+  });
+}
+
+const recallJobParameters = (imageId, cb) => {
   console.log("Recalling job parameters for image ID", imageId);
   getImageInfo(imageId).then((resp) => {
     recalledImageId.value = imageId;
@@ -290,9 +415,16 @@ const recallJobParameters = (imageId) => {
       imageParams.value.width = extractedSize.width;
       imageParams.value.height = extractedSize.height;
     }
+
+    // Check if the image is eligible for upscaling, so that the user can choose to upscale it if desired
+    isRecalledImageEligibleForUpscale.value = ((imageParams.value.width * 2) * (imageParams.value.height * 2)) <= (2560 * 1440);
+
     imageParams.value.options.cfg_scale = params["CFG scale"];
     imageParams.value.options.seed = params.Seed;
     useAlertStore().addAlert("Recalled job parameters successfully!", "success");
+    if(cb) {
+      cb();
+    }
   }).catch((error) => {
     console.error("Failed to recall job parameters", error);
     useAlertStore().addAlert("Failed to recall job parameters, please try again later!", "error");
@@ -397,6 +529,7 @@ onUnmounted(() => {
           <span>Recalled image ID: {{recalledImageId}}</span>
           <img class="m-3 w-3/4 md:w-1/2 lg:w-1/6" :src="getLinkForJobId(recalledImageId)" alt="Recalled Image" />
           <button @click="recalledImageId = null" class="m-3 btn btn-info">Clear Recall</button>
+          <button @click="onRecallUpscaleClick" :disabled="!isRecalledImageEligibleForUpscale" class="m-3 btn btn-secondary">Upscale 2x</button>
         </div>
         <div v-show="isGenSettingsExpanded" class="m-3">
           <div class="form-control">
@@ -439,7 +572,7 @@ onUnmounted(() => {
             <label class="mb-2">
               <span class="ms-2">Sampler</span>
             </label>
-            <select class="select neutral-border mb-2">
+            <select v-model="imageParams.options.sampler" class="select neutral-border mb-2">
               <option v-for="sampler in availableSamplers" :value="sampler" :key="sampler.name">{{sampler.name}}</option>
             </select>
           </div>
@@ -468,16 +601,19 @@ onUnmounted(() => {
       <div class="generated-image-container col-span-12 md:col-span-10">
         <label class="form-control border border-opacity-50 border-gray-500 cornered">
           <span class="label ms-2">Results</span>
-          <img id="job-image" src="" alt="Generated Image" class="m-3 pl-2 pr-8 w-full" />
+          <img id="job-image" :src="getImageForJob" alt="Generated Image" class="m-3 pl-2 pr-8 w-full" />
         </label>
       </div>
       <div class="generated-image-metadata-container col-span-12 md:col-span-2 pt-0 m-3 md:pt-10">
         <div class="form-control border border-opacity-50 border-gray-500 cornered">
-          <span class="label ms-2">Metadata</span>
+          <p class="label ms-2 ml-auto mr-auto">Post-processing</p>
           <div class="m-3">
-            <p>Image ID: 1234567890</p>
-            <p>Generated on: 2021-10-01 12:34:56</p>
-            <p>Generated by: User#1234</p>
+            <button :disabled="!lastJob || lastJob.status !== 'completed'" @click="saveLastJobImage" class="btn btn-success w-full relative"><oh-vue-icon animation="float" class="absolute w-24 size-6 -translate-y-1/2 left-4" name="fa-download"/>Download Image</button>
+            <button :disabled="!lastJob || lastJob.status !== 'completed'" @click="copyImageLink" class="btn btn-info w-full mt-2 relative"><oh-vue-icon class="absolute size-7 w-24 -translate-y-1/2 left-4" animation="wrench" name="hi-clipboard-copy"/>Copy Image Link</button>
+            <button v-if="!isDeletePending" :disabled="!lastJob || lastJob.status !== 'completed'" @click="onDeleteClick" class="btn btn-error w-full mt-2 relative"><oh-vue-icon class="absolute top-1/2 size-7 w-24 -translate-y-1/2 left-4" name="md-deleteforever"/>Delete Image</button>
+            <button v-else :disabled="!lastJob || lastJob.status !== 'completed'" @click="onDeleteClick" class="btn btn-error w-full mt-2 relative"><oh-vue-icon class="absolute size-6 w-24 -translate-y-1/2 left-4" name="md-deleteforever"/><strong>Click To Confirm</strong></button>
+            <button :disabled="!lastJob || lastJob.status !== 'completed'" @click="recallLastJob" class="btn btn-primary w-full mt-2 relative"><oh-vue-icon class="absolute size-6 w-24 -translate-y-1/2 left-4" animation="spin" name="md-replaycirclefilled"/> Recall Parameters</button>
+            <button :disabled="!lastJob || lastJob.status !== 'completed' || !isEligibleForUpscale" @click="onUpscaleClick" class="btn btn-secondary w-full mt-2 relative"><oh-vue-icon class="absolute size-6 w-24 -translate-y-1/2 left-4" animation="pulse" name="fa-angle-double-up"/>Recall & Upscale 2x</button>
           </div>
         </div>
       </div>
@@ -536,5 +672,4 @@ onUnmounted(() => {
   /*width: fit-content;*/
   min-width: 75%;
 }
-
 </style>
