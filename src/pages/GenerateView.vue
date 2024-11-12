@@ -599,6 +599,7 @@ onUnmounted(() => {
             <label class="cursor-pointer">
               <span class="ms-2 align-middle">Seed &nbsp;</span>
               <input v-model="imageParams.options.seed" class="align-middle neutral-border input" type="text" />
+              <button @click="imageParams.options.seed = -1" class="btn btn-secondary mt-2 lg:mt-0 lg:ml-3">Randomize Seed</button>
             </label>
           </div>
         </div>
