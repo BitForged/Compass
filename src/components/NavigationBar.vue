@@ -41,8 +41,7 @@ const promptComingSoon = () => {
             <RouterLink to="/gallery" class="btn btn-ghost">Gallery</RouterLink>
           </li>
           <li>
-            <RouterLink v-if="isDevMode" to="/generate" class="btn btn-ghost disabled">Generate</RouterLink>
-            <span v-else @click="promptComingSoon" class="btn btn-ghost disabled">Generate</span>
+            <RouterLink to="/generate" class="btn btn-ghost">Generate</RouterLink>
           </li>
           <li>
             <AuthButton />
