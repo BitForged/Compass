@@ -96,7 +96,7 @@ onMounted(async () => {
 <style scoped>
 .card-custom {
   background-color: #3C3A36;
-  box-shadow: 0px 0px 15px rgba(255, 215, 215, 0.013), 0px 0px 30px rgba(173, 216, 230, 0.1), 0px 6px 10px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0 15px rgba(255, 215, 215, 0.013), 0 0 30px rgba(173, 216, 230, 0.1), 0 6px 10px rgba(0, 0, 0, 0.4);
   /*box-shadow: 0px 0px 15px rgba(255, 153, 153, 0.25),
   0px 0px 30px rgba(255, 102, 102, 0.15),
   0px 6px 10px rgba(0, 0, 0, 0.4);*/
