@@ -1,9 +1,12 @@
 <script setup>
 import {computed, inject, onMounted, onUnmounted, ref, watch} from "vue";
 import { OhVueIcon } from "oh-vue-icons";
-import {generateTxt2Img, getAvailableModels, getAvailableSamplers} from "@/services/NavigatorService";
+import {generateTxt2Img, getAvailableModels, getAvailableSamplers, getImageInfo} from "@/services/NavigatorService";
 import {useAlertStore} from "@/stores/alerts";
 import SizePreviewBox from "@/components/SizePreviewBox.vue";
+import {useRouter} from "vue-router";
+
+const router = useRouter();
 
 const imageParams = ref({
   width: 1024,
@@ -20,6 +23,8 @@ const imageParams = ref({
 });
 
 const isWorking = ref(false);
+
+const recalledImageId = ref(null);
 
 const currentProgress = ref(null);
 
@@ -86,6 +91,11 @@ const isImageParamsValid = computed(() => {
   return typeof imageParams.value.options.seed === 'number';
 
 });
+
+const getLinkForJobId = (jobId) => {
+  return `${import.meta.env.VITE_API_BASE}/api/images/${jobId}`;
+};
+
 const toggleGenSettings = () => {
   isGenSettingsExpanded.value = !isGenSettingsExpanded.value;
 }
@@ -228,6 +238,67 @@ const onConnect = () => {
   useAlertStore().addAlert("Navigator RT reconnected!", "success");
 };
 
+const extractModelNameFromInfo = (infoText) => {
+  // Regular expression to match the "Model: " pattern followed by the model name
+  const modelRegex = /Model: ([^,\n]+)/;
+  const match = infoText.match(modelRegex);
+
+  if (match) {
+    return match[1].trim(); // Extract the captured group and trim whitespace
+  } else {
+    return null; // Model not found
+  }
+}
+
+const extractSizeFromInfo = (infoText) => {
+  // Regular expression to match the "Size: " pattern followed by the size
+  const sizeRegex = /Size: (\d+)x(\d+)/;
+  const match = infoText.match(sizeRegex);
+
+  if (match) {
+    return {
+      width: parseInt(match[1], 10),
+      height: parseInt(match[2], 10),
+    };
+  } else {
+    return null; // Size not found
+  }
+}
+
+const recallJobParameters = (imageId) => {
+  console.log("Recalling job parameters for image ID", imageId);
+  getImageInfo(imageId).then((resp) => {
+    recalledImageId.value = imageId;
+    console.log("Received Image Info:", resp.data);
+    let params = resp.data.parameters;
+    imageParams.value.options.prompt = params["Prompt"];
+    imageParams.value.options.negative_prompt = params["Negative prompt"];
+    let extractedModelName = extractModelNameFromInfo(resp.data.info);
+    let locatedModel = availableModels.value.find((model) => model.model_name === extractedModelName);
+    if(locatedModel) {
+      imageParams.value.options.model = locatedModel;
+    } else {
+      console.error(`Failed to locate model (${extractedModelName}) from image info, using default model`);
+    }
+    imageParams.value.options.sampler = availableSamplers.value.find((sampler) => sampler.name === params.Sampler);
+    imageParams.value.options.steps = params["Steps"];
+    if(params["Hires resize-1"] !== "0") {
+      imageParams.value.width = params["Hires resize-1"];
+      imageParams.value.height = params["Hires resize-2"];
+    } else {
+      let extractedSize = extractSizeFromInfo(resp.data.info);
+      imageParams.value.width = extractedSize.width;
+      imageParams.value.height = extractedSize.height;
+    }
+    imageParams.value.options.cfg_scale = params["CFG scale"];
+    imageParams.value.options.seed = params.Seed;
+    useAlertStore().addAlert("Recalled job parameters successfully!", "success");
+  }).catch((error) => {
+    console.error("Failed to recall job parameters", error);
+    useAlertStore().addAlert("Failed to recall job parameters, please try again later!", "error");
+  });
+}
+
 
 watch(showTipsModal, (newValue) => {
   toggleBodyScroll(newValue);
@@ -274,6 +345,11 @@ onMounted(() => {
   navigatorRt.on("model-changed", onRemoteModelChanging);
   navigatorRt.on("connect", onConnect);
   navigatorRt.on("disconnect", onDisconnect);
+  // Detect "recall" query parameter and attempt to recall job parameters
+  if (router.currentRoute.value.query.recall) {
+    console.log("Recalling job parameters from query", router.currentRoute.value.query.recall);
+    recallJobParameters(router.currentRoute.value.query.recall);
+  }
 });
 
 onUnmounted(() => {
@@ -314,10 +390,15 @@ onUnmounted(() => {
       </div>
     </div>
     <div class="mt-5">
-      <label class="form-control border border-opacity-50 border-gray-500 cornered">
-        <span v-if="isGenSettingsExpanded" @click="isGenSettingsExpanded = !isGenSettingsExpanded" class="label ms-2">Generation Settings</span>
-        <span v-else @click="isGenSettingsExpanded = !isGenSettingsExpanded" class="label ms-2">Generation Settings (Hidden; Click to expand)</span>
-        <div v-if="isGenSettingsExpanded" class="m-3">
+      <div class="form-control border border-opacity-50 border-gray-500 cornered">
+        <span v-show="isGenSettingsExpanded" @click="toggleGenSettings" class="label ms-2">Generation Settings</span>
+        <span v-show="!isGenSettingsExpanded" @click="toggleGenSettings" class="label ms-2">Generation Settings (Hidden; Click to expand)</span>
+        <div v-show="recalledImageId !== null && isGenSettingsExpanded" class="m-3">
+          <span>Recalled image ID: {{recalledImageId}}</span>
+          <img class="m-3 w-3/4 md:w-1/2 lg:w-1/6" :src="getLinkForJobId(recalledImageId)" alt="Recalled Image" />
+          <button @click="recalledImageId = null" class="m-3 btn btn-info">Clear Recall</button>
+        </div>
+        <div v-show="isGenSettingsExpanded" class="m-3">
           <div class="form-control">
             <label class="label">Target Width</label>
             <div class="grid grid-cols-12 gap-4">
@@ -381,7 +462,7 @@ onUnmounted(() => {
             </label>
           </div>
         </div>
-      </label>
+      </div>
     </div>
     <div class="grid grid-cols-12 gap-4 mt-5">
       <div class="generated-image-container col-span-12 md:col-span-10">

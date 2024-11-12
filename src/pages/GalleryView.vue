@@ -83,6 +83,7 @@ onMounted(async () => {
             <v-lazy-image @click="onImageClick(job)" class="job-image" :src-placeholder="getPreviewForJob(job)" :src="getImageForJob(job)" width="512" alt="Job Image" />
           </div>
           <div class="card-actions justify-end">
+            <RouterLink :to="{ path: '/generate', query: { recall: job.id}}" class="btn btn-info">Recall</RouterLink>
             <button v-if="!isPendingDelete(job)" @click="setPendingDelete(job)" class="btn btn-warning">Delete?</button>
             <button v-else @click="onDeleteClick(job)" class="btn btn-error btn-delete">Confirm!</button>
           </div>

@@ -8,10 +8,10 @@ module.exports = {
                     "accent": "#a855f7",
                     "neutral": "#44403c",
                     "base-100": "#1c1917",
-                    "info": "#0000ff",
+                    "info": "#3636c7",
                     "success": "#28a745",
                     "warning": "#eab308",
-                    "error": "#ff0000",
+                    "error": "#ce2626",
                 },
             },
         ]
