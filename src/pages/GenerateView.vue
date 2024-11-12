@@ -495,7 +495,12 @@ onUnmounted(() => {
         <h3 class="text-lg font-bold mt-4 mb-2">Advanced Tips</h3>
         <span class="text-sm"><em>Note: Usage of advanced techniques can give you more control, but sometimes that control can cause images to generate incorrectly. If something doesn't look right, try shifting things around a bit!</em></span><br/>
         <ul>
-          <li class="pt-2 pb-2">Prompt Weighting: You can wrap text in <code>()</code> in order to give it weight, and then optionally specify the weight with <code>:WEIGHT</code>. Example &mdash; <code>(flowers:1.2)</code></li>
+          <li class="pt-2 pb-2">
+            Prompt Weighting: You can wrap text in <code>()</code> in order to give it weight, and then optionally specify the weight with <code>:WEIGHT</code>. Example &mdash; <code>(flowers:1.2)</code>
+            <ul>
+              <li>You can also use <code>[]</code>'s to do the reverse! Surrounding parts of your prompt with square-brackets in order to give it <em>less</em> weight/attention. Example &mdash; <code>[flowers]</code>'s</li>
+            </ul>
+          </li>
           <li>BREAK: You can use <code>BREAK</code> to separate different parts of the prompt. Example &mdash; <code>Generate a landscape with a BREAK sunset over the mountains.</code></li>
         </ul>
 
