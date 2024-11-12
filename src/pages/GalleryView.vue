@@ -76,11 +76,10 @@ onMounted(async () => {
     <div v-else class="text-gray-400 py-2">
       <p>Click on an image to view it in full size.</p>
     </div>
-    <div class="grid grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
       <div v-for="job in jobs" :key="job.id" class="card card-custom bordered col-auto hover:animate-pulse">
         <div class="card-body">
           <div class="image-container">
-<!--            <img @click="onImageClick(job)" class="job-image" width="512" :src="getImageForJob(job)" alt="Job Image">{{job.description}}</img>-->
             <v-lazy-image @click="onImageClick(job)" class="job-image" :src-placeholder="getPreviewForJob(job)" :src="getImageForJob(job)" width="512" alt="Job Image" />
           </div>
           <div class="card-actions justify-end">
