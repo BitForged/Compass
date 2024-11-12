@@ -64,7 +64,7 @@ const doesSizeRequireUpscale = computed(() => {
 });
 
 const doesSizeExceedLimit = computed(() => {
-  return (imageParams.value.width * imageParams.value.height) > (2160 * 1440);
+  return (imageParams.value.width * imageParams.value.height) > (2560 * 1440);
 });
 
 const isImageParamsValid = computed(() => {
@@ -86,6 +86,9 @@ const isImageParamsValid = computed(() => {
   return typeof imageParams.value.options.seed === 'number';
 
 });
+const toggleGenSettings = () => {
+  isGenSettingsExpanded.value = !isGenSettingsExpanded.value;
+}
 
 const rangeColorClasses = computed(() => {
   if(doesSizeExceedLimit.value) {
@@ -157,7 +160,8 @@ const sendJobToNavigator = () => {
       steps: imageParams.value.options.steps,
       width: imageParams.value.width,
       height: imageParams.value.height,
-      cfg_scale: imageParams.value.cfg_scale,
+      cfg_scale: imageParams.value.options.cfg_scale,
+      seed: imageParams.value.options.seed,
     };
     generateTxt2Img(job).then((resp) => {
       console.log("Sent image request to Navigator", resp.data);
@@ -230,31 +234,31 @@ watch(showTipsModal, (newValue) => {
 });
 
 watch(imageParams, (newValue) => {
-  if(!isNaN(newValue.options.seed) && newValue.options.seed !== '') {
+  if(!isNaN(newValue.options.seed)) {
     imageParams.value.options.seed = Number(newValue.options.seed);
   } else {
     imageParams.value.options.seed = -1;
   }
 
-  if(!isNaN(newValue.options.cfg_scale) && newValue.options.cfg_scale !== '') {
+  if(!isNaN(newValue.options.cfg_scale)) {
     imageParams.value.options.cfg_scale = Number(newValue.options.cfg_scale);
   } else {
     imageParams.value.options.cfg_scale = 7.0;
   }
 
-  if(!isNaN(newValue.options.steps) && newValue.options.steps !== '') {
+  if(!isNaN(newValue.options.steps)) {
     imageParams.value.options.steps = Number(newValue.options.steps);
   } else {
     imageParams.value.options.steps = 50;
   }
 
-  if(!isNaN(newValue.width) && newValue.width !== '') {
+  if(!isNaN(newValue.width)) {
     imageParams.value.width = Number(newValue.width);
   } else {
     imageParams.value.width = 800;
   }
 
-  if(!isNaN(newValue.height) && newValue.height !== '') {
+  if(!isNaN(newValue.height)) {
     imageParams.value.height = Number(newValue.height);
   } else {
     imageParams.value.height = 600;
@@ -362,12 +366,12 @@ onUnmounted(() => {
             <label class="cursor-pointer mb-2">
               <span class="ms-2">Steps</span>
             </label>
-            <input v-model="imageParams.options.steps" class="input w-1/12 neutral-border" type="text" />
+            <input v-model="imageParams.options.steps" class="input w-1/2 md:w-1/4 lg:w-1/12 neutral-border" type="text" />
           </div>
           <div v-if="showAdvancedOptions" class="form-control mt-2">
-            <label class="cursor-pointer">
+            <label class="cursor-pointer mb-2">
               <span class="ms-2 align-middle">CFG Scale &nbsp;</span>
-              <input v-model="imageParams.options.cfg_scale" class="align-middle neutral-border input" type="text" />
+              <input v-model="imageParams.options.cfg_scale" class="align-middle w-1/2 md:w-1/4 lg:w-1/12 neutral-border input" type="text" />
             </label>
           </div>
           <div v-if="showAdvancedOptions" class="form-control mt-2">
@@ -383,7 +387,7 @@ onUnmounted(() => {
       <div class="generated-image-container col-span-12 md:col-span-10">
         <label class="form-control border border-opacity-50 border-gray-500 cornered">
           <span class="label ms-2">Results</span>
-          <img id="job-image" src="" alt="Generated Image" class="m-3 w-1/2" />
+          <img id="job-image" src="" alt="Generated Image" class="m-3 pl-2 pr-8 w-full" />
         </label>
       </div>
       <div class="generated-image-metadata-container col-span-12 md:col-span-2 pt-0 m-3 md:pt-10">
@@ -398,7 +402,7 @@ onUnmounted(() => {
       </div>
     </div>
     <div v-if="showTipsModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-      <div class="modal-content bg-neutral-700 p-5 rounded-lg w-full md:w-1/2 mx-4">
+      <div class="modal-content bg-neutral-700 p-5 rounded-lg w-5/6 md:w-3/4 mx-4">
         <h2 class="text-xl font-bold mb-4">How to Construct a Prompt</h2>
         <h3 class="text-lg font-bold mb-2">Be Specific</h3>
         <p>Provide a clear and concise description of what you want to see in the image. Use specific keywords and avoid ambiguous terms.</p>
@@ -438,6 +442,13 @@ onUnmounted(() => {
 .preview-box-container {
   display: flex;
   justify-content: flex-start;
+}
+
+.generated-image-container {
+  /*display: flex;
+  justify-content: center;*/
+  /*width: fit-content;*/
+  min-width: 75%;
 }
 
 </style>
