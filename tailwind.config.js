@@ -3,15 +3,15 @@ module.exports = {
         themes: [
             {
                 'mytheme': {
-                    "primary": "#67e8f9",
-                    "secondary": "#78716c",
-                    "accent": "#a855f7",
-                    "neutral": "#44403c",
+                    "primary": "#2563eb",
+                    "secondary": "#f59e0b",
+                    "accent": "#a78bfa",
+                    "neutral": "#5e6065",
                     "base-100": "#1c1917",
-                    "info": "#3636c7",
-                    "success": "#28a745",
-                    "warning": "#eab308",
-                    "error": "#ce2626",
+                    "info": "#38bdf8",
+                    "success": "#4ade80",
+                    "warning": "#facc15",
+                    "error": "#f87171",
                 },
             },
         ]

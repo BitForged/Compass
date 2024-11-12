@@ -378,8 +378,8 @@ onUnmounted(() => {
       </div>
       <div class="generate-button-container col-span-12 md:col-span-2 pt-0 m-3 md:pt-10">
         <div class="row mb-2">
-          <button v-if="isImageParamsValid" @click="sendJobToNavigator" :disabled="isWorking" class="btn btn-success text-white text-opacity-100 w-full mb-5">Generate</button>
-          <button v-else class="btn btn-disabled text-white text-opacity-100 w-full mb-5">Generate</button>
+          <button v-if="isImageParamsValid" @click="sendJobToNavigator" :disabled="isWorking" class="btn btn-success w-full mb-5">Generate</button>
+          <button v-else class="btn btn-disabled text-opacity-100 w-full mb-5">Generate</button>
           <button class="btn btn-error btn-disabled text-white text-opacity-100 w-full">Interrupt / Cancel</button>
         </div>
         <div class="row">

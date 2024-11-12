@@ -100,12 +100,7 @@ onMounted(async () => {
   /*box-shadow: 0px 0px 15px rgba(255, 153, 153, 0.25),
   0px 0px 30px rgba(255, 102, 102, 0.15),
   0px 6px 10px rgba(0, 0, 0, 0.4);*/
-  color: white;
   height: fit-content;
-}
-
-.btn-delete {
-  color: white;
 }
 
 /*.job-image {
