@@ -102,7 +102,9 @@ const isImageParamsValid = computed(() => {
 
 const isEligibleForUpscale = computed(() => {
   if(!lastJob.value) return false;
-  return ((lastJob.value.width * 2) * (lastJob.value.height * 2)) <= (2560 * 1440);
+  const upscaledWidth = lastJob.value.width * 2;
+  const upscaledHeight = lastJob.value.height * 2;
+  return (upscaledWidth * upscaledHeight) <= (2560 * 1440) && (upscaledWidth * upscaledHeight) > (1024 * 1024);
 });
 
 const getLinkForJobId = (jobId) => {
@@ -417,7 +419,12 @@ const recallJobParameters = (imageId, cb) => {
     }
 
     // Check if the image is eligible for upscaling, so that the user can choose to upscale it if desired
-    isRecalledImageEligibleForUpscale.value = ((imageParams.value.width * 2) * (imageParams.value.height * 2)) <= (2560 * 1440);
+    // To be eligible,
+    // the targeted upscaled image must be less than or equal to 2560x1440 and greater than 1024x1024
+    // (if it's less than 1024x1024, then it won't trigger the upscale process on Navigator)
+    const upscaledWidth = imageParams.value.width * 2;
+    const upscaledHeight = imageParams.value.height * 2;
+    isRecalledImageEligibleForUpscale.value = upscaledWidth * upscaledHeight <= (2560 * 1440) && (upscaledWidth * upscaledHeight) > (1024 * 1024);
 
     imageParams.value.options.cfg_scale = params["CFG scale"];
     imageParams.value.options.seed = params.Seed;
