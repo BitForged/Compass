@@ -27,6 +27,7 @@ const imageParams = ref({
     steps: 50,
     cfg_scale: 7.0,
     seed: -1,
+    subseed_strength: null,
   },
 });
 
@@ -200,6 +201,15 @@ const sendJobToNavigator = () => {
       cfg_scale: imageParams.value.options.cfg_scale,
       seed: imageParams.value.options.seed,
     };
+    if(imageParams.value.options.subseed_strength) {
+      console.log(`Subseed strength (variation: ${imageParams.value.options.subseed_strength})`);
+      job.subseed_strength = imageParams.value.options.subseed_strength;
+      job.subseed = -1;
+      // Reset the subseed strength after 1 second
+      setTimeout(() => {
+        imageParams.value.options.subseed_strength = null;
+      }, 1000);
+    }
     generateTxt2Img(job).then((resp) => {
       console.log("Sent image request to Navigator", resp.data);
       currentJobId.value = resp.data.job_id;
@@ -393,6 +403,18 @@ const copyImageLink = () => {
   }
 }
 
+// Variation is a number between 0 and 1
+// 0 is the weakest variation (barely any change), 1 is the strongest (most change)
+const onVariationClick = (variation) => {
+  console.log("Clicked on variation", variation);
+  recallLastJob(() => {
+    imageParams.value.options.subseed_strength = variation;
+    setTimeout(() => {
+      sendJobToNavigator();
+    }, 500);
+  })
+}
+
 const onUpscaleClick = () => {
   console.log("Upscaling image");
   recallLastJob(() => {
@@ -436,6 +458,16 @@ const onRecallUpscaleClick = () => {
         imageParams.value.options.seed = -1;
       }, 1000);
     }, 1500);
+  });
+}
+
+const onRecallVariationClick = (variation) => {
+  console.log("Recalling and varying image", variation);
+  recallJobParameters(recalledImageId.value, () => {
+    imageParams.value.options.subseed_strength = variation;
+    setTimeout(() => {
+      sendJobToNavigator();
+    }, 500);
   });
 }
 
@@ -584,6 +616,8 @@ onUnmounted(() => {
           <span>Recalled image ID: {{recalledImageId}}</span>
           <img class="m-3 w-3/4 md:w-1/2 lg:w-1/6" :src="getLinkForJobId(recalledImageId)" alt="Recalled Image" />
           <button @click="recalledImageId = null" class="m-3 btn btn-info">Clear Recall</button>
+          <button @click="onRecallVariationClick(0.3)" class="m-3 btn btn-accent">Vary (Weak)</button>
+          <button @click="onRecallVariationClick(0.7)" class="m-3 btn btn-accent">Vary (Strong)</button>
           <button @click="onRecallUpscaleClick" :disabled="!isRecalledImageEligibleForUpscale" class="m-3 btn btn-secondary">Upscale 2x</button>
         </div>
         <div v-show="isGenSettingsExpanded" class="m-3">
@@ -669,6 +703,8 @@ onUnmounted(() => {
             <button v-if="!isDeletePending" :disabled="!lastJob || lastJob.status !== 'completed'" @click="onDeleteClick" class="btn btn-error w-full mt-2 relative"><oh-vue-icon class="absolute top-1/2 size-7 w-24 -translate-y-1/2 left-4" name="md-deleteforever"/>Delete Image</button>
             <button v-else :disabled="!lastJob || lastJob.status !== 'completed'" @click="onDeleteClick" class="btn btn-error w-full mt-2 relative"><oh-vue-icon class="absolute size-7 top-1/2 w-24 -translate-y-1/2 left-4" name="md-deleteforever"/><strong>Click To Confirm</strong></button>
             <button :disabled="!lastJob || lastJob.status !== 'completed'" @click="recallLastJob" class="btn btn-primary w-full mt-2 relative"><oh-vue-icon class="absolute size-6 w-24 -translate-y-1/2 left-4" animation="spin" name="md-replaycirclefilled"/> Recall Parameters</button>
+            <button :disabled="!lastJob || lastJob.status !== 'completed'" @click="onVariationClick(0.3)" class="btn btn-accent w-full mt-2 relative"><oh-vue-icon class="absolute size-6 w-24 -translate-y-1/2 left-4" animation="pulse" name="gi-perspective-dice-six-faces-random"/> Variation (Subtle)</button>
+            <button :disabled="!lastJob || lastJob.status !== 'completed'" @click="onVariationClick(0.7)" class="btn btn-accent w-full mt-2 relative"><oh-vue-icon class="absolute size-6 w-24 -translate-y-1/2 left-4" animation="pulse" name="gi-perspective-dice-six-faces-random"/> Variation (Strong)</button>
             <button :disabled="!lastJob || lastJob.status !== 'completed' || !isEligibleForUpscale" @click="onUpscaleClick" class="btn btn-secondary w-full mt-2 relative"><oh-vue-icon class="absolute size-6 w-24 -translate-y-1/2 left-4" animation="pulse" name="fa-angle-double-up"/>Recall & Upscale 2x</button>
           </div>
         </div>
