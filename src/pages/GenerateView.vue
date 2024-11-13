@@ -1,7 +1,13 @@
 <script setup>
 import {computed, inject, onMounted, onUnmounted, ref, watch} from "vue";
 import { OhVueIcon } from "oh-vue-icons";
-import {generateTxt2Img, getAvailableModels, getAvailableSamplers, getImageInfo} from "@/services/NavigatorService";
+import {
+  generateTxt2Img,
+  getAvailableModels,
+  getAvailableSamplers,
+  getImageInfo,
+  interruptJob
+} from "@/services/NavigatorService";
 import {useAlertStore} from "@/stores/alerts";
 import SizePreviewBox from "@/components/SizePreviewBox.vue";
 import {useRouter} from "vue-router";
@@ -100,6 +106,10 @@ const isImageParamsValid = computed(() => {
   }
   return typeof imageParams.value.options.seed === 'number';
 
+});
+
+const isInterruptible = computed(() => {
+  return (currentJobId.value && currentProgress.value);
 });
 
 const isEligibleForUpscale = computed(() => {
@@ -265,6 +275,22 @@ const onJobFinished = (data) => {
     }, 3000);
   }
 };
+
+const onInterruptClicked = () => {
+  if(currentJobId.value) {
+    console.log("Interrupting job", currentJobId.value);
+    interruptJob(currentJobId.value).then((_) => {
+      console.log(`Interrupted job ${currentJobId.value}`);
+      useAlertStore().addAlert(`Job interrupted successfully`, "success");
+      progressText.value = "Job interrupted!";
+    }).catch((error) => {
+      console.error(`Failed to interrupt job ${currentJobId.value}`, error);
+      useAlertStore().addAlert(`Failed to interrupt job with ID: ${currentJobId.value}`, "error");
+    });
+  } else {
+    console.error("No job to interrupt");
+  }
+}
 
 const onRemoteModelChanging = (data) => {
   console.log("Remote model changed", data);
@@ -541,7 +567,7 @@ onUnmounted(() => {
         <div class="row mb-2">
           <button v-if="isImageParamsValid" @click="sendJobToNavigator" :disabled="isWorking || !isConnectedToRt" class="btn btn-success w-full mb-5">Generate</button>
           <button v-else class="btn btn-disabled text-opacity-100 w-full mb-5">Generate</button>
-          <button class="btn btn-error btn-disabled text-white text-opacity-100 w-full">Interrupt / Cancel</button>
+          <button :disabled="!isInterruptible" @click="onInterruptClicked" class="btn btn-error text-white text-opacity-100 w-full">Interrupt / Cancel</button>
         </div>
         <div class="row">
           <h3 class="text-center text-lg font-bold">Status</h3>

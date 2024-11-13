@@ -15,3 +15,7 @@ export function generateTxt2Img(jobData) {
 export function getImageInfo(jobId) {
     return request({endpoint: `api/images/${jobId}/info`});
 }
+
+export function interruptJob(jobId) {
+    return request({method: "POST", endpoint: `api/queue/interrupt/${jobId}`});
+}
