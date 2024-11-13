@@ -78,7 +78,7 @@ const showAdvancedOptions = ref(false);
 const availableModels = ref([]);
 const availableSamplers = ref([]);
 
-const navigatorRt = inject("$navigator_rt").socket;
+const navigatorRt = inject("$navigator_rt");
 
 const doesSizeRequireUpscale = computed(() => {
   return (imageParams.value.width * imageParams.value.height) > (1024 * 1024);
@@ -305,7 +305,6 @@ const onDisconnect = () => {
   isConnectedToRt.value = false;
   console.error("Navigator RT disconnected, attempting to reconnect...");
   useAlertStore().addAlert("Navigator RT disconnected, attempting to reconnect...", "error");
-  navigatorRt.connect();
 };
 
 const onConnect = () => {
@@ -532,6 +531,7 @@ onMounted(() => {
   navigatorRt.on("model-changed", onRemoteModelChanging);
   navigatorRt.on("connect", onConnect);
   navigatorRt.on("disconnect", onDisconnect);
+  isConnectedToRt.value = navigatorRt.isSocketConnected;
   // Detect "recall" query parameter and attempt to recall job parameters
   if (router.currentRoute.value.query.recall) {
     console.log("Recalling job parameters from query", router.currentRoute.value.query.recall);
