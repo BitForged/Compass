@@ -376,6 +376,9 @@ const onUpscaleClick = () => {
       setTimeout(() => {
         imageParams.value.width = originalWidth;
         imageParams.value.height = originalHeight;
+        // After the user has upscaled the image, they probably don't want to re-generate the base image
+        // on the next run, so reset the seed to -1
+        imageParams.value.options.seed = -1;
       }, 1000);
     }, 1500);
   });
@@ -399,6 +402,9 @@ const onRecallUpscaleClick = () => {
       setTimeout(() => {
         imageParams.value.width = originalWidth;
         imageParams.value.height = originalHeight;
+        // After the user has upscaled the image, they probably don't want to re-generate the base image
+        // on the next run, so reset the seed to -1
+        imageParams.value.options.seed = -1;
       }, 1000);
     }, 1500);
   });
