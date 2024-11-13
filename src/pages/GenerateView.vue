@@ -26,6 +26,8 @@ const imageParams = ref({
 
 const isWorking = ref(false);
 
+const isConnectedToRt = ref(false);
+
 const recalledImageId = ref(null);
 
 const isRecalledImageEligibleForUpscale = ref(false);
@@ -195,8 +197,8 @@ const sendJobToNavigator = () => {
       lastJob.value = { ... job, status: 'queued', job_id: resp.data.job_id };
       // TODO: Handle queue status
     }).catch((error) => {
-      console.error("Failed to generate image from Navigator", error);
-      useAlertStore().addAlert("Failed to generate image from Navigator, please try again later!", "error");
+      console.error("from", error);
+      useAlertStore().addAlert("Failed to send image generation request to Navigator, please try again later!", "error");
       isWorking.value = false;
     });
   } else {
@@ -274,12 +276,14 @@ const onRemoteModelChanging = (data) => {
 }
 
 const onDisconnect = () => {
+  isConnectedToRt.value = false;
   console.error("Navigator RT disconnected, attempting to reconnect...");
   useAlertStore().addAlert("Navigator RT disconnected, attempting to reconnect...", "error");
   navigatorRt.connect();
 };
 
 const onConnect = () => {
+  isConnectedToRt.value = true;
   if(isInitialConnection.value) {
     console.log("Navigator RT connected (first connect, notification disabled)!");
     isInitialConnection.value = false;
@@ -535,7 +539,7 @@ onUnmounted(() => {
       </div>
       <div class="generate-button-container col-span-12 md:col-span-2 pt-0 m-3 md:pt-10">
         <div class="row mb-2">
-          <button v-if="isImageParamsValid" @click="sendJobToNavigator" :disabled="isWorking" class="btn btn-success w-full mb-5">Generate</button>
+          <button v-if="isImageParamsValid" @click="sendJobToNavigator" :disabled="isWorking || !isConnectedToRt" class="btn btn-success w-full mb-5">Generate</button>
           <button v-else class="btn btn-disabled text-opacity-100 w-full mb-5">Generate</button>
           <button class="btn btn-error btn-disabled text-white text-opacity-100 w-full">Interrupt / Cancel</button>
         </div>
