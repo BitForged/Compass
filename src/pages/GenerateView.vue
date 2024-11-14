@@ -641,9 +641,9 @@ onUnmounted(() => {
           <span>Recalled image ID: {{recalledImageId}}</span>
           <img class="m-3 w-3/4 md:w-1/2 lg:w-1/6" :src="getLinkForJobId(recalledImageId)" alt="Recalled Image" />
           <button @click="recalledImageId = null" class="m-3 btn btn-info">Clear Recall</button>
-          <button @click="onRecallVariationClick(0.3)" class="m-3 btn btn-accent">Vary (Weak)</button>
-          <button @click="onRecallVariationClick(0.7)" class="m-3 btn btn-accent">Vary (Strong)</button>
-          <button @click="onRecallUpscaleClick" :disabled="!isRecalledImageEligibleForUpscale" class="m-3 btn btn-secondary">Upscale 2x</button>
+          <button @click="onRecallVariationClick(0.3)" :disabled="isWorking" class="m-3 btn btn-accent">Vary (Weak)</button>
+          <button @click="onRecallVariationClick(0.7)" :disabled="isWorking" class="m-3 btn btn-accent">Vary (Strong)</button>
+          <button @click="onRecallUpscaleClick" :disabled="!isRecalledImageEligibleForUpscale || isWorking" class="m-3 btn btn-secondary">Upscale 2x</button>
         </div>
         <div v-show="isGenSettingsExpanded" class="m-3">
           <div class="form-control">
