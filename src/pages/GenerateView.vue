@@ -6,7 +6,7 @@ import {
   getAvailableModels,
   getAvailableSamplers,
   getImageInfo,
-  interruptJob
+  interruptJob, upscaleImageWithHR
 } from "@/services/NavigatorService";
 import {useAlertStore} from "@/stores/alerts";
 import SizePreviewBox from "@/components/SizePreviewBox.vue";
@@ -232,6 +232,21 @@ const sendJobToNavigator = () => {
   }
 };
 
+const sendUpscaleJobToNavigator = (jobId) => {
+  console.log("Sending upscale job to Navigator", jobId);
+  isWorking.value = true;
+  upscaleImageWithHR(jobId).then((resp) => {
+    console.log("Sent upscale request to Navigator", resp.data);
+    currentJobId.value = resp.data.job_id;
+    progressText.value = "Job queued, waiting for results...";
+    lastJob.value = { status: 'queued', job_id: resp.data.job_id};
+  }).catch((error) => {
+    console.error("Failed to send upscale request to Navigator", error);
+    useAlertStore().addAlert("Failed to send upscale request to Navigator, please try again later!", "error");
+    isWorking.value = false;
+  });
+}
+
 const saveLastJobImage = () => {
   if(lastJob.value && lastJob.value.img_path) {
     console.log("Downloading image", lastJob.value);
@@ -424,22 +439,12 @@ const onVariationClick = (variation) => {
 const onUpscaleClick = () => {
   console.log("Upscaling image");
   recallLastJob(() => {
-    const originalWidth = lastJob.value.width;
-    const originalHeight = lastJob.value.height;
-    imageParams.value.width = originalWidth * 2;
-    imageParams.value.height = originalHeight * 2;
-    setTimeout(() => {
-      sendJobToNavigator();
-      setTimeout(() => {
-        imageParams.value.width = originalWidth;
-        imageParams.value.height = originalHeight;
-        // After the user has upscaled the image, they probably don't want to re-generate the base image
-        // on the next run, so reset the seed to -1
-        imageParams.value.options.seed = -1;
-        imageParams.value.options.subseed = null;
-        imageParams.value.options.subseed_strength = null;
-      }, 1000);
-    }, 1500);
+    sendUpscaleJobToNavigator(lastJob.value.job_id);
+    // After the user has upscaled the image, they probably don't want to re-generate the base image
+    // on the next run, so reset the seed to -1
+    imageParams.value.options.seed = -1;
+    imageParams.value.options.subseed = null;
+    imageParams.value.options.subseed_strength = null;
   });
 }
 
@@ -454,20 +459,10 @@ const onRecallUpscaleClick = () => {
       useAlertStore().addAlert("Upscaled image exceeds maximum resolution, so this image is unfortunately not eligible for upscaling.", "error");
       return;
     }
-    imageParams.value.width = upscaledWidth;
-    imageParams.value.height = upscaledHeight;
-    setTimeout(() => {
-      sendJobToNavigator();
-      setTimeout(() => {
-        imageParams.value.width = originalWidth;
-        imageParams.value.height = originalHeight;
-        // After the user has upscaled the image, they probably don't want to re-generate the base image
-        // on the next run, so reset the seed to -1
-        imageParams.value.options.seed = -1;
-        imageParams.value.options.subseed = null;
-        imageParams.value.options.subseed_strength = null;
-      }, 1000);
-    }, 1500);
+    sendUpscaleJobToNavigator(recalledImageId.value);
+    imageParams.value.options.seed = -1;
+    imageParams.value.options.subseed = null;
+    imageParams.value.options.subseed_strength = null;
   });
 }
 
