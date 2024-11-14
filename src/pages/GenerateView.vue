@@ -27,6 +27,7 @@ const imageParams = ref({
     steps: 50,
     cfg_scale: 7.0,
     seed: -1,
+    subseed: -1,
     subseed_strength: null,
   },
 });
@@ -204,7 +205,12 @@ const sendJobToNavigator = () => {
     if(imageParams.value.options.subseed_strength) {
       console.log(`Subseed strength (variation: ${imageParams.value.options.subseed_strength})`);
       job.subseed_strength = imageParams.value.options.subseed_strength;
-      job.subseed = -1;
+      if(imageParams.value.options.subseed) {
+        console.log(`Subseed (variation seed: ${imageParams.value.options.subseed})`);
+        job.subseed = imageParams.value.options.subseed;
+      } else {
+        job.subseed = -1;
+      }
       // Reset the subseed strength after 1 second
       setTimeout(() => {
         imageParams.value.options.subseed_strength = null;
@@ -430,6 +436,8 @@ const onUpscaleClick = () => {
         // After the user has upscaled the image, they probably don't want to re-generate the base image
         // on the next run, so reset the seed to -1
         imageParams.value.options.seed = -1;
+        imageParams.value.options.subseed = null;
+        imageParams.value.options.subseed_strength = null;
       }, 1000);
     }, 1500);
   });
@@ -456,6 +464,8 @@ const onRecallUpscaleClick = () => {
         // After the user has upscaled the image, they probably don't want to re-generate the base image
         // on the next run, so reset the seed to -1
         imageParams.value.options.seed = -1;
+        imageParams.value.options.subseed = null;
+        imageParams.value.options.subseed_strength = null;
       }, 1000);
     }, 1500);
   });
@@ -495,6 +505,21 @@ const recallJobParameters = (imageId, cb) => {
       let extractedSize = extractSizeFromInfo(resp.data.info);
       imageParams.value.width = extractedSize.width;
       imageParams.value.height = extractedSize.height;
+    }
+
+    const subseed = params["Variation seed"];
+    const subseedStrength = params["Variation seed strength"];
+
+    if(subseed) {
+      imageParams.value.options.subseed = subseed;
+      console.log("Subseed found", subseed);
+      if(subseedStrength) {
+        imageParams.value.options.subseed_strength = subseedStrength;
+        console.log("Subseed strength found", subseedStrength);
+      } else {
+        imageParams.value.options.subseed_strength = 0.3;
+        console.log("Subseed strength not found, defaulting to 0.3");
+      }
     }
 
     // Check if the image is eligible for upscaling, so that the user can choose to upscale it if desired
