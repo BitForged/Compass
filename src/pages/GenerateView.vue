@@ -58,7 +58,7 @@ const progressText = ref("Nothing to report yet...");
 
 const currentJobId = ref(null);
 
-const isGenSettingsExpanded = ref(true);
+const isGenSettingsExpanded = ref(false);
 
 const categories = ref([]);
 
@@ -127,7 +127,7 @@ const isEligibleForUpscale = computed(() => {
   if(!lastJob.value) return false;
   const upscaledWidth = lastJob.value.width * 2;
   const upscaledHeight = lastJob.value.height * 2;
-  return (upscaledWidth * upscaledHeight) <= (2560 * 1440) && (upscaledWidth * upscaledHeight) > (1024 * 1024);
+  return (upscaledWidth * upscaledHeight) <= (2560 * 1440);
 });
 
 const getLinkForJobId = (jobId) => {
@@ -231,8 +231,9 @@ const sendJobToNavigator = () => {
     generateTxt2Img(job).then((resp) => {
       console.log("Sent image request to Navigator", resp.data);
       currentJobId.value = resp.data.job_id;
-      progressText.value = "Job queued, waiting for results...";
+      progressText.value = "Job queued, waiting to be picked up by Navigator...";
       lastJob.value = { ... job, status: 'queued', job_id: resp.data.job_id };
+      isGenSettingsExpanded.value = false;
       // TODO: Handle queue status
     }).catch((error) => {
       console.error("from", error);
@@ -250,8 +251,9 @@ const sendUpscaleJobToNavigator = (jobId) => {
   upscaleImageWithHR(jobId).then((resp) => {
     console.log("Sent upscale request to Navigator", resp.data);
     currentJobId.value = resp.data.job_id;
-    progressText.value = "Job queued, waiting for results...";
+    progressText.value = "Job queued, waiting to be picked up by Navigator...";
     lastJob.value = { status: 'queued', job_id: resp.data.job_id};
+    isGenSettingsExpanded.value = false;
   }).catch((error) => {
     console.error("Failed to send upscale request to Navigator", error);
     useAlertStore().addAlert("Failed to send upscale request to Navigator, please try again later!", "error");
@@ -469,6 +471,7 @@ const onRecallUpscaleClick = () => {
     const upscaledHeight = originalHeight * 2;
     if((upscaledWidth * upscaledHeight) > (2560 * 1440)) {
       useAlertStore().addAlert("Upscaled image exceeds maximum resolution, so this image is unfortunately not eligible for upscaling.", "error");
+      console.error("Image is not eligible for upscaling!");
       return;
     }
     sendUpscaleJobToNavigator(recalledImageId.value);
@@ -531,11 +534,10 @@ const recallJobParameters = (imageId, cb) => {
 
     // Check if the image is eligible for upscaling, so that the user can choose to upscale it if desired
     // To be eligible,
-    // the targeted upscaled image must be less than or equal to 2560x1440 and greater than 1024x1024
-    // (if it's less than 1024x1024, then it won't trigger the upscale process on Navigator)
+    // the targeted upscaled image must be less than or equal to 2560x1440
     const upscaledWidth = imageParams.value.width * 2;
     const upscaledHeight = imageParams.value.height * 2;
-    isRecalledImageEligibleForUpscale.value = upscaledWidth * upscaledHeight <= (2560 * 1440) && (upscaledWidth * upscaledHeight) > (1024 * 1024);
+    isRecalledImageEligibleForUpscale.value = upscaledWidth * upscaledHeight <= (2560 * 1440);
 
     imageParams.value.options.cfg_scale = params["CFG scale"];
     imageParams.value.options.seed = params.Seed;
@@ -640,6 +642,7 @@ onMounted(() => {
   if (router.currentRoute.value.query.recall) {
     console.log("Recalling job parameters from query", router.currentRoute.value.query.recall);
     recallJobParameters(router.currentRoute.value.query.recall);
+    isGenSettingsExpanded.value = true;
   }
 });
 
@@ -677,8 +680,8 @@ onUnmounted(() => {
         </div>
         <div class="row">
           <h3 class="text-center text-lg font-bold">Status</h3>
-          <span>{{progressText}}</span>
-          <progress class="progress w-full" :class="progressClasses" :value="currentProgress" :max="maxProgress"></progress>
+          <p class="text-center mt-2">{{progressText}}</p>
+          <progress v-if="currentJobId !== null" class="progress w-full" :class="progressClasses" :value="currentProgress" :max="maxProgress"></progress>
         </div>
       </div>
     </div>
