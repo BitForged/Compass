@@ -5,6 +5,7 @@ import {useAlertStore} from "@/stores/alerts";
 const categories = ref([]);
 const newCategoryName = ref("");
 const selectedCategoryId = ref(null);
+const isDeletePending = ref(false);
 const alertStore = useAlertStore();
 
 const emit = defineEmits(["onCategorySelected", "onCategoriesChanged"]);
@@ -65,6 +66,13 @@ const onAddCategory = () => {
 };
 
 const onDeleteCategory = () => {
+  if(!isDeletePending.value) {
+    isDeletePending.value = true;
+    setTimeout(() => {
+      isDeletePending.value = false;
+    }, 2000);
+    return;
+  }
   if (selectedCategoryId.value < 0) {
     console.error("Cannot delete a category with a negative ID");
     alertStore.addAlert("Cannot delete a category with a negative ID", "error");
@@ -98,7 +106,8 @@ onMounted(() => {
       <select v-model="selectedCategoryId" class="mt-2 select select-bordered row">
         <option v-for="category in categories" :value="category.id">{{category.name}}</option>
       </select>
-      <button v-if="allowModify" @click="onDeleteCategory" :disabled="isDeleteDisabled" class="btn btn-error mt-1 ms-1 row">Delete</button>
+      <button v-if="allowModify && !isDeletePending" @click="onDeleteCategory" :disabled="isDeleteDisabled" class="btn btn-warning mt-1 ms-1 row">Delete?</button>
+      <button v-if="allowModify && isDeletePending" @click="onDeleteCategory" :disabled="isDeleteDisabled" class="btn btn-error mt-1 ms-1 row"><strong>Confirm!</strong></button>
       <div class="mt-3" v-if="allowModify && isAddingCategory">
         <input v-model="newCategoryName" class="input input-bordered mt-1 row" type="text" placeholder="New Category Name"/>
         <button @click="onAddCategory" :disabled="newCategoryName === ''" class="btn btn-primary mt-1 ms-1 row">Add</button>
