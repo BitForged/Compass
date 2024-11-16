@@ -38,6 +38,5 @@ const updateSW = registerSW({
         }
     },
     onOfflineReady() {
-        alert("No internet connection found. Most of the app features may not work.");
     }
 })
