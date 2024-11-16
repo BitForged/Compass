@@ -5,7 +5,7 @@ import {
   generateTxt2Img,
   getAvailableModels,
   getAvailableSamplers,
-  getImageInfo,
+  getImageInfo, getMyCategories,
   interruptJob, upscaleImageWithHR
 } from "@/services/NavigatorService";
 import {useAlertStore} from "@/stores/alerts";
@@ -13,12 +13,14 @@ import SizePreviewBox from "@/components/SizePreviewBox.vue";
 import {useRouter} from "vue-router";
 import {saveAs} from "file-saver";
 import {deleteImage} from "@/services/UserService";
+import CategorySelect from "@/components/CategorySelect.vue";
 
 const router = useRouter();
 
 const imageParams = ref({
   width: 1024,
   height: 1024,
+  categoryId: null,
   options: {
     prompt: "",
     negative_prompt: "",
@@ -57,6 +59,8 @@ const progressText = ref("Nothing to report yet...");
 const currentJobId = ref(null);
 
 const isGenSettingsExpanded = ref(true);
+
+const categories = ref([]);
 
 const progressClasses = computed(() => {
   if(isModelChanging.value) {
@@ -109,6 +113,11 @@ const isImageParamsValid = computed(() => {
   return typeof imageParams.value.options.seed === 'number';
 
 });
+
+const onCategorySelected = (categoryId) => {
+  console.log("Selected category", categoryId);
+  imageParams.value.categoryId = categoryId;
+};
 
 const isInterruptible = computed(() => {
   return (currentJobId.value && currentProgress.value);
@@ -182,6 +191,8 @@ const initializeData = () => {
     errored = true;
   });
 
+  retrieveCategories();
+
   if(errored) {
     useAlertStore().addAlert("Failed to fetch data from Navigator, some functionality may work unexpectedly!", "error");
   }
@@ -201,6 +212,7 @@ const sendJobToNavigator = () => {
       height: imageParams.value.height,
       cfg_scale: imageParams.value.options.cfg_scale,
       seed: imageParams.value.options.seed,
+      categoryId: imageParams.value.categoryId
     };
     if(imageParams.value.options.subseed_strength) {
       console.log(`Subseed strength (variation: ${imageParams.value.options.subseed_strength})`);
@@ -537,6 +549,17 @@ const recallJobParameters = (imageId, cb) => {
   });
 }
 
+const getCategoryName = (categoryId) => {
+  if(categoryId === null) {
+    return "No category selected";
+  }
+  let category = categories.value.find((cat) => cat.id === categoryId);
+  if(category) {
+    return category.name;
+  }
+  return "Unknown category";
+}
+
 
 watch(showTipsModal, (newValue) => {
   toggleBodyScroll(newValue);
@@ -575,12 +598,41 @@ watch(imageParams, (newValue) => {
 
 }, {deep: true});
 
+const retrieveCategories = () => {
+  getMyCategories().then((res) => {
+    categories.value = res.data;
+  }).catch((error) => {
+    console.error("Failed to get categories", error);
+  });
+};
+
+const onJobStarted = (data) => {
+  let jobId = data.job_id;
+  if(data.job_id === currentJobId.value) {
+    console.log("Job started", jobId);
+    progressText.value = "Job starting...";
+  }
+};
+
+const onJobFailed = (data) => {
+  let jobId = data.job_id;
+  if(data.job_id === currentJobId.value) {
+    console.error("Job failed", jobId);
+    progressText.value = "Job failed!";
+    currentProgress.value = null;
+    currentJobId.value = null;
+    isWorking.value = false;
+  }
+};
+
 onMounted(() => {
   toggleBodyScroll(showTipsModal.value);
   initializeData();
+  navigatorRt.on("task-started", onJobStarted);
   navigatorRt.on("task-progress", onJobProgress);
   navigatorRt.on("task-finished", onJobFinished);
   navigatorRt.on("model-changed", onRemoteModelChanging);
+  navigatorRt.on("task-failed", onJobFailed);
   navigatorRt.on("connect", onConnect);
   navigatorRt.on("disconnect", onDisconnect);
   isConnectedToRt.value = navigatorRt.isSocketConnected;
@@ -593,9 +645,11 @@ onMounted(() => {
 
 onUnmounted(() => {
   toggleBodyScroll(false);
+  navigatorRt.off("task-started", onJobStarted);
   navigatorRt.off("task-progress", onJobProgress);
   navigatorRt.off("task-finished", onJobFinished);
   navigatorRt.off("model-changed", onRemoteModelChanging);
+  navigatorRt.off("task-failed", onJobFailed);
   navigatorRt.off("connect", onConnect);
   navigatorRt.off("disconnect", onDisconnect);
 });
@@ -641,6 +695,12 @@ onUnmounted(() => {
           <button @click="onRecallUpscaleClick" :disabled="!isRecalledImageEligibleForUpscale || isWorking" class="m-3 btn btn-secondary">Upscale 2x</button>
         </div>
         <div v-show="isGenSettingsExpanded" class="m-3">
+          <div>
+            <label class="label">Category</label>
+            <CategorySelect @onCategorySelected="onCategorySelected" allow-modify="true" />
+            <label v-if="imageParams.categoryId !== null" class="label">This image will be categorized under: {{getCategoryName(imageParams.categoryId)}}</label>
+            <label v-else class="label">This image will not be categorized.</label>
+          </div>
           <div class="form-control">
             <label class="label">Target Width</label>
             <div class="grid grid-cols-12 gap-4">
