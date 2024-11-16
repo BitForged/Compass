@@ -3,11 +3,25 @@ import {deleteImage, getMyJobs} from "@/services/UserService";
 import {onMounted, ref} from "vue";
 import {useAlertStore} from "@/stores/alerts";
 import VLazyImage from "v-lazy-image";
+import CategorySelect from "@/components/CategorySelect.vue";
+import {getMyCategories, setCategory} from "@/services/NavigatorService";
 
 const jobs = ref([]);
+const selectedCategoryId = ref(null);
+const categories = ref([])
 
 const pendingDeleteId = ref("");
 const pendingDeleteTimeoutId = ref(null);
+
+const updatingCategoryForJob = ref(null);
+
+function getJobs() {
+  if(selectedCategoryId.value === null) {
+    return jobs.value;
+  } else {
+    return jobs.value.filter(j => j.category_id === selectedCategoryId.value);
+  }
+}
 
 function getImageForJob(job) {
   return `${import.meta.env.VITE_API_BASE}/api/images/${job.id}`;
@@ -53,9 +67,82 @@ function setPendingDelete(job) {
   }, 2500);
 }
 
+const getCategoryName = (categoryId) => {
+  if(categoryId === null) {
+    return "Uncategorized";
+  }
+  const category = categories.value.find(c => c.id === categoryId);
+  if(!category) {
+    return "Unknown";
+  }
+  return category.name;
+};
+
+const onCategorySelected = async (categoryId) => {
+  console.log(`Selected category with ID: ${categoryId}`);
+  selectedCategoryId.value = categoryId;
+  await fetchCategories();
+};
+
+const onCategoriesChanged = async () => {
+  console.log(`Refreshing categories`);
+  await fetchCategories();
+};
+
+const onCategoryUpdate = async (jobId) => {
+  console.log(`Updating category for job ${jobId}`);
+  if(updatingCategoryForJob.value === jobId) {
+    updatingCategoryForJob.value = null;
+    return;
+  }
+  updatingCategoryForJob.value = jobId;
+};
+
+const onCategoryUpdateConfirmed = async (categoryId) => {
+  if(categoryId === null) {
+    return;
+  }
+  console.log(`Updating category for job ${updatingCategoryForJob.value} to ${categoryId}`);
+  const job = jobs.value.find(j => j.id === updatingCategoryForJob.value);
+  updatingCategoryForJob.value = null;
+  if(!job) {
+    console.error(`Failed to find job with ID ${updatingCategoryForJob.value}`);
+    useAlertStore().addAlert(`Failed to find job with ID ${updatingCategoryForJob.value}`, "error");
+    return;
+  }
+  if(categoryId === -100) {
+    console.log(`Deleting category for job ${job.id}`);
+    categoryId = 0;
+  }
+  setCategory(job.id, categoryId).then((res) => {
+    if (res.status !== 204) {
+      console.error(`Failed to update category for job ${job.id}`, res);
+      useAlertStore().addAlert(`Failed to update category for job ${job.id}`, "error");
+      return;
+    }
+    console.log(`Updated category for job ${job.id} to ${categoryId}`);
+    // Update the job in the list
+    if(categoryId === 0) {
+      job.category_id = null;
+    } else {
+      job.category_id = categoryId;
+    }
+    useAlertStore().addAlert(`Updated category for job ${job.id} to ${categoryId}`, "success");
+  });
+};
+
+const fetchCategories = async () => {
+  getMyCategories().then((res) => {
+    categories.value = res.data;
+  }).catch((error) => {
+    console.error("Failed to get categories", error);
+  });
+}
+
 onMounted(async () => {
   let retrievedJobs = await getMyJobs();
   jobs.value = retrievedJobs.data;
+  await fetchCategories();
 });
 </script>
 
@@ -68,24 +155,46 @@ onMounted(async () => {
           <div class="stat-title">Images Generated</div>
           <div class="stat-value">{{jobs.length}}</div>
         </div>
+        <div class="stat stat-custom">
+          <div class="stat-title"># of Categories</div>
+          <div class="stat-value">{{categories.length}}</div>
+        </div>
+      </div>
+      <div class="mt-2">
+        <p>Filter By Category</p>
+        <CategorySelect @onCategorySelected="onCategorySelected" @onCategoriesChanged="onCategoriesChanged" allow-modify="true"/>
       </div>
     </div>
-    <div v-if="jobs.length === 0" class="text-center">
-      <p>You have no images yet. Generate some through BitJourney on Discord!</p>
+    <div v-if="getJobs().length === 0" class="text-center mt-2">
+      <p>You have no images yet (or they are all filtered out). Generate some through BitJourney on Discord, or via the Generate tab!</p>
     </div>
     <div v-else class="text-gray-400 py-2">
       <p>Click on an image to view it in full size.</p>
     </div>
     <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-      <div v-for="job in jobs" :key="job.id" class="card card-custom bordered col-auto hover:animate-pulse">
+      <div v-for="job in getJobs()" :key="job.id" class="card card-custom bordered col-auto hover:animate-pulse">
         <div class="card-body">
           <div class="image-container">
             <v-lazy-image @click="onImageClick(job)" class="job-image" :src-placeholder="getPreviewForJob(job)" :src="getImageForJob(job)" width="512" alt="Job Image" />
           </div>
           <div class="card-actions justify-end">
+            <button @click="onCategoryUpdate(job.id)" class="btn btn-accent">Categorize</button>
             <RouterLink :to="{ path: '/generate', query: { recall: job.id}}" class="btn btn-info">Recall</RouterLink>
             <button v-if="!isPendingDelete(job)" @click="setPendingDelete(job)" class="btn btn-warning">Delete?</button>
             <button v-else @click="onDeleteClick(job)" class="btn btn-error btn-delete">Confirm!</button>
+          </div>
+          <div class="card-footer">
+            <CategorySelect v-if="updatingCategoryForJob === job.id" @onCategorySelected="onCategoryUpdateConfirmed" show-remove-option="true" />
+            <div class="grid grid-cols-3 mt-2">
+                <div class="col-auto">
+                  <span class="text-xs text-gray-400">Job ID: {{job.id}}</span>
+                </div>
+                <div class="col-auto">
+                </div>
+                <div v-if="job.category_id !== null" class="col-auto">
+                  <span class="text-xs text-gray-400">Category: {{getCategoryName(job.category_id)}}</span>
+                </div>
+            </div>
           </div>
         </div>
       </div>

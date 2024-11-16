@@ -23,3 +23,19 @@ export function getImageInfo(jobId) {
 export function interruptJob(jobId) {
     return request({method: "POST", endpoint: `api/queue/interrupt/${jobId}`});
 }
+
+export function getMyCategories() {
+    return request({endpoint: "api/user/categories"});
+}
+
+export function deleteCategory(categoryId) {
+    return request({method: "DELETE", endpoint: `api/user/category/${categoryId}`});
+}
+
+export function addCategory(name) {
+    return request({method: "POST", endpoint: "api/user/category", data: {name}});
+}
+
+export function setCategory(imageId, categoryId) {
+    return request({method: "PUT", endpoint: `api/user/image/${imageId}/category`, data: {categoryId}});
+}
