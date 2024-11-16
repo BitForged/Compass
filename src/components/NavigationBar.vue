@@ -48,6 +48,7 @@ const promptComingSoon = () => {
           </li>
         </ul>
       </div>
+      <img src="/compass-logo-md.png" alt="Compass" class="w-8 h-8" />
       <RouterLink to="/" class="btn btn-ghost text-xl">Compass</RouterLink>
     </div>
     <div class="navbar-center hidden lg:flex">
