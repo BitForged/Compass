@@ -707,14 +707,14 @@ onUnmounted(() => {
           <div class="form-control">
             <label class="label">Target Width</label>
             <div class="grid grid-cols-12 gap-4">
-              <input v-model="imageParams.width" type="range" :class="rangeColorClasses" class="col-span-11 range" min="64" max="4096" />
+              <input disabled v-model="imageParams.width" type="range" :class="rangeColorClasses" class="col-span-11 range" min="64" max="4096" />
               <input v-model="imageParams.width" type="text" class="col-span-11 md:col-span-1 w-1/4 md:w-1/2 input input-primary" @blur="validateImageSizeParams" />
             </div>
           </div>
           <div class="form-control pb-3">
             <label class="label">Target Height</label>
             <div class="grid grid-cols-12 gap-4">
-              <input v-model="imageParams.height" type="range" :class="rangeColorClasses" class="col-span-11 range" min="64" max="4096" />
+              <input disabled v-model="imageParams.height" type="range" :class="rangeColorClasses" class="col-span-11 range" min="64" max="4096" />
               <input v-model="imageParams.height" type="text" class="col-span-11 md:col-span-1 w-1/4 md:w-1/2 input input-primary" @blur="validateImageSizeParams" />
             </div>
             <span v-if="doesSizeRequireUpscale && !doesSizeExceedLimit"><em>Note: Due to the chosen size, your image will generate at half-resolution and will be upscaled to the full resolution.</em></span>
@@ -774,7 +774,7 @@ onUnmounted(() => {
       <div class="generated-image-container col-span-12 md:col-span-10">
         <label class="form-control border border-opacity-50 border-gray-500 cornered">
           <span class="label ms-2">Results</span>
-          <img id="job-image" :src="getImageForJob" alt="Generated Image" class="m-3 pl-2 pr-8 w-full" />
+          <img v-if="lastJob && lastJob.status === 'completed'" id="job-image" :src="getImageForJob" alt="Generated Image" class="m-3 pl-2 pr-8 w-full" />
         </label>
       </div>
       <div class="generated-image-metadata-container col-span-12 md:col-span-2 pt-0 m-3 md:pt-10">
