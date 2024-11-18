@@ -443,6 +443,7 @@ const copyImageLink = () => {
 const onVariationClick = (variation) => {
   console.log("Clicked on variation", variation);
   recallLastJob(() => {
+    imageParams.value.options.subseed = -1;
     imageParams.value.options.subseed_strength = variation;
     setTimeout(() => {
       sendJobToNavigator();
@@ -485,6 +486,7 @@ const onRecallVariationClick = (variation) => {
   console.log("Recalling and varying image", variation);
   recallJobParameters(recalledImageId.value, () => {
     imageParams.value.options.subseed_strength = variation;
+    imageParams.value.options.subseed = -1;
     setTimeout(() => {
       sendJobToNavigator();
     }, 500);
@@ -549,6 +551,14 @@ const recallJobParameters = (imageId, cb) => {
     console.error("Failed to recall job parameters", error);
     useAlertStore().addAlert("Failed to recall job parameters, please try again later!", "error");
   });
+}
+
+const onClearRecallClick = () => {
+  console.log("Clearing recalled image");
+  recalledImageId.value = null;
+  imageParams.value.options.seed = -1;
+  imageParams.value.options.subseed = -1;
+  imageParams.value.options.subseed_strength = null;
 }
 
 const getCategoryName = (categoryId) => {
@@ -692,7 +702,7 @@ onUnmounted(() => {
         <div v-show="recalledImageId !== null && isGenSettingsExpanded" class="m-3">
           <span>Recalled image ID: {{recalledImageId}}</span>
           <img class="m-3 w-3/4 md:w-1/2 lg:w-1/6" :src="getLinkForJobId(recalledImageId)" alt="Recalled Image" />
-          <button @click="recalledImageId = null" class="m-3 btn btn-info">Clear Recall</button>
+          <button @click="onClearRecallClick" class="m-3 btn btn-info">Clear Recall</button>
           <button @click="onRecallVariationClick(0.3)" :disabled="isWorking" class="m-3 btn btn-accent">Vary (Weak)</button>
           <button @click="onRecallVariationClick(0.7)" :disabled="isWorking" class="m-3 btn btn-accent">Vary (Strong)</button>
           <button @click="onRecallUpscaleClick" :disabled="!isRecalledImageEligibleForUpscale || isWorking" class="m-3 btn btn-secondary">Upscale 2x</button>
