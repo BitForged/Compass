@@ -5,7 +5,7 @@ import {
   generateTxt2Img,
   getAvailableModels,
   getAvailableSamplers,
-  getImageInfo, getMyCategories,
+  getImageInfo, getMetadataForImage, getMyCategories,
   interruptJob, upscaleImageWithHR
 } from "@/services/NavigatorService";
 import {useAlertStore} from "@/stores/alerts";
@@ -115,7 +115,7 @@ const isImageParamsValid = computed(() => {
 });
 
 const onCategorySelected = (categoryId) => {
-  console.log("Selected category", categoryId);
+  console.log("Selected category", getCategoryName(categoryId), categoryId);
   imageParams.value.categoryId = categoryId;
 };
 
@@ -543,6 +543,17 @@ const recallJobParameters = (imageId, cb) => {
 
     imageParams.value.options.cfg_scale = params["CFG scale"];
     imageParams.value.options.seed = params.Seed;
+
+    getMetadataForImage(imageId).then((metadata) => {
+      console.log("Received Image Metadata:", metadata.data);
+      if(metadata.data.category_id !== null) {
+        imageParams.value.categoryId = metadata.data.category_id;
+        console.log(`Image is categorized under ${categories.value.find((c) => c.id === metadata.data.category_id).name} (${metadata.data.category_id})`);
+      }
+    }).catch((_) => {
+      console.error("Failed to get image metadata, this account may not own the image.");
+    });
+
     useAlertStore().addAlert("Recalled job parameters successfully!", "success");
     if(cb) {
       cb();
@@ -712,7 +723,7 @@ onUnmounted(() => {
         <div v-show="isGenSettingsExpanded" class="m-3">
           <div>
             <label class="label">Category</label>
-            <CategorySelect @onCategorySelected="onCategorySelected" allow-modify="true" />
+            <CategorySelect :category-id="imageParams.categoryId" @onCategorySelected="onCategorySelected" allow-modify="true" />
             <label v-if="imageParams.categoryId !== null" class="label">This image will be categorized under: {{getCategoryName(imageParams.categoryId)}}</label>
             <label v-else class="label">This image will not be categorized.</label>
           </div>

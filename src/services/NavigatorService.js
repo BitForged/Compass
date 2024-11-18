@@ -39,3 +39,7 @@ export function addCategory(name) {
 export function setCategory(imageId, categoryId) {
     return request({method: "PUT", endpoint: `api/user/image/${imageId}/category`, data: {categoryId}});
 }
+
+export function getMetadataForImage(imageId) {
+    return request({endpoint: `api/user/image/${imageId}/meta`});
+}

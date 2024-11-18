@@ -1,5 +1,5 @@
 <script setup>
-import {computed, onMounted, ref, watch} from "vue";
+import {computed, onMounted, ref} from "vue";
 import {addCategory, deleteCategory, getMyCategories} from "@/services/NavigatorService";
 import {useAlertStore} from "@/stores/alerts";
 const categories = ref([]);
@@ -9,15 +9,15 @@ const isDeletePending = ref(false);
 const alertStore = useAlertStore();
 
 const emit = defineEmits(["onCategorySelected", "onCategoriesChanged"]);
-const props = defineProps(["allowModify", "showRemoveOption"]);
+const props = defineProps(["allowModify", "showRemoveOption", "categoryId"]);
 
-watch(selectedCategoryId, (newVal) => {
-  // Do not emit the event if the category has a negative ID as these are not valid categories
-  if(newVal >= 0 || newVal === -100)
-    emit("onCategorySelected", newVal);
-  else
-    emit("onCategorySelected", null);
-});
+// watch(selectedCategoryId, (newVal) => {
+//   // Do not emit the event if the category has a negative ID as these are not valid categories
+//   if(newVal >= 0 || newVal === -100)
+//     emit("onCategorySelected", newVal);
+//   else
+//     emit("onCategorySelected", null);
+// });
 
 const refreshCategories = () => {
   getMyCategories().then((res) => {
@@ -95,6 +95,16 @@ const onDeleteCategory = () => {
 
 }
 
+const onCategoryChange = (event) => {
+  let newId = Number(event.target.value);
+  selectedCategoryId.value = newId;
+  if(newId >= 0 || newId === -100) {
+    emit("onCategorySelected", newId);
+  } else {
+    emit("onCategorySelected", null);
+  }
+}
+
 onMounted(() => {
   refreshCategories();
 });
@@ -103,7 +113,7 @@ onMounted(() => {
 <template>
   <div class="grid grid-cols-1 grid-flow-row grid-rows-auto">
     <div class="col">
-      <select v-model="selectedCategoryId" class="mt-2 select select-bordered row">
+      <select :value="categoryId || -1" @change="onCategoryChange" class="mt-2 select select-bordered row">
         <option v-for="category in categories" :value="category.id">{{category.name}}</option>
       </select>
       <button v-if="allowModify && !isDeletePending" @click="onDeleteCategory" :disabled="isDeleteDisabled" class="btn btn-warning mt-1 ms-1 row">Delete?</button>

@@ -162,7 +162,7 @@ onMounted(async () => {
       </div>
       <div class="mt-2">
         <p>Filter By Category</p>
-        <CategorySelect @onCategorySelected="onCategorySelected" @onCategoriesChanged="onCategoriesChanged" allow-modify="true"/>
+        <CategorySelect :category-id="selectedCategoryId" @onCategorySelected="onCategorySelected" @onCategoriesChanged="onCategoriesChanged" allow-modify="true"/>
       </div>
     </div>
     <div v-if="getJobs().length === 0" class="text-center mt-2">
