@@ -678,9 +678,10 @@ onUnmounted(() => {
             <oh-vue-icon @click="showTipsModal = true" name="hi-information-circle" class="ml-2"/>
           </span>
 
-          <textarea v-model="imageParams.options.prompt" class="textarea h-24 textarea-bordered m-3" placeholder="Enter your prompt here! What do you want to see in the image?"></textarea>
-          <textarea v-model="imageParams.options.negative_prompt" class="textarea h-24 textarea-bordered m-3" placeholder="Optionally, enter a negative prompt - which describes what you don't want to see in the image."></textarea>
+          <textarea :disabled="recalledImageId !== null" v-model="imageParams.options.prompt" class="textarea h-24 textarea-bordered m-3" placeholder="Enter your prompt here! What do you want to see in the image?"></textarea>
+          <textarea :disabled="recalledImageId !== null" v-model="imageParams.options.negative_prompt" class="textarea h-24 textarea-bordered m-3" placeholder="Optionally, enter a negative prompt - which describes what you don't want to see in the image."></textarea>
           <span v-if="imageParams.options.seed !== -1" class="m-3 mt-1 text-sm text-accent">Note: You have a seed set, visit "Generation Settings" => Advanced Options to change/randomize this.</span>
+          <span v-if="recalledImageId !== null" class="m-3 mt-1 text-sm text-error">Warning: You have a recalled image active, the prompt and other settings cannot be changed as changing the settings would cause variations to be invalid. Clear the recalled image in "Generation Settings" to unlock editing of these.</span>
         </label>
       </div>
       <div class="generate-button-container col-span-12 md:col-span-2 pt-0 m-3 md:pt-10">
@@ -719,14 +720,14 @@ onUnmounted(() => {
             <label class="label">Target Width</label>
             <div class="grid grid-cols-12 gap-4">
               <input disabled v-model="imageParams.width" type="range" :class="rangeColorClasses" class="col-span-8 md:col-span-11 range" min="64" max="4096" />
-              <input v-model="imageParams.width" type="number" class="col-span-4 md:col-span-1  md:w-1/2 input input-primary" @blur="validateImageSizeParams" />
+              <input :disabled="recalledImageId !== null" v-model="imageParams.width" type="number" class="col-span-4 md:col-span-1  md:w-1/2 input input-primary" @blur="validateImageSizeParams" />
             </div>
           </div>
           <div class="form-control pb-3">
             <label class="label">Target Height</label>
             <div class="grid grid-cols-12 gap-4">
               <input disabled v-model="imageParams.height" type="range" :class="rangeColorClasses" class="col-span-8 md:col-span-11 range" min="64" max="4096" />
-              <input v-model="imageParams.height" type="number" class="col-span-4 md:col-span-1 md:w-1/2 input input-primary" @blur="validateImageSizeParams" />
+              <input :disabled="recalledImageId !== null" v-model="imageParams.height" type="number" class="col-span-4 md:col-span-1 md:w-1/2 input input-primary" @blur="validateImageSizeParams" />
             </div>
             <span v-if="doesSizeRequireUpscale && !doesSizeExceedLimit"><em>Note: Due to the chosen size, your image will generate at half-resolution and will be upscaled to the full resolution.</em></span>
             <span class="text-error" v-if="doesSizeExceedLimit"><em>Error: The chosen size exceeds the maximum size, please choose a lower resolution.</em></span>
@@ -741,7 +742,7 @@ onUnmounted(() => {
             <label class="mb-2">
               <span class="ms-2">Image Model</span>
             </label>
-            <select id="model-selector" v-model="imageParams.options.model" class="select neutral-border mb-2">
+            <select :disabled="recalledImageId !== null" id="model-selector" v-model="imageParams.options.model" class="select neutral-border mb-2">
               <option v-for="model in availableModels" :value="model" :key="model.model_name">{{model.friendly_name ? model.friendly_name : model.model_name}}</option>
             </select>
           </div>
@@ -755,7 +756,7 @@ onUnmounted(() => {
             <label class="mb-2">
               <span class="ms-2">Sampler</span>
             </label>
-            <select v-model="imageParams.options.sampler" class="select neutral-border mb-2">
+            <select :disabled="recalledImageId !== null" v-model="imageParams.options.sampler" class="select neutral-border mb-2">
               <option v-for="sampler in availableSamplers" :value="sampler" :key="sampler.name">{{sampler.name}}</option>
             </select>
           </div>
@@ -763,19 +764,19 @@ onUnmounted(() => {
             <label class="cursor-pointer mb-2">
               <span class="ms-2">Steps</span>
             </label>
-            <input v-model="imageParams.options.steps" class="input w-1/2 md:w-1/4 lg:w-1/12 neutral-border" type="number" min="1" max="75" />
+            <input :disabled="recalledImageId !== null" v-model="imageParams.options.steps" class="input w-1/2 md:w-1/4 lg:w-1/12 neutral-border" type="number" min="1" max="75" />
           </div>
           <div v-if="showAdvancedOptions" class="form-control mt-2">
             <label class="cursor-pointer mb-2">
               <span class="ms-2 align-middle">CFG Scale &nbsp;</span>
-              <input v-model="imageParams.options.cfg_scale" class="align-middle w-1/2 md:w-1/4 lg:w-1/12 neutral-border input" type="number" />
+              <input :disabled="recalledImageId !== null" v-model="imageParams.options.cfg_scale" class="align-middle w-1/2 md:w-1/4 lg:w-1/12 neutral-border input" type="number" />
             </label>
           </div>
           <div v-if="showAdvancedOptions" class="form-control mt-2">
             <label class="cursor-pointer">
               <span class="ms-2 align-middle">Seed &nbsp;</span>
-              <input v-model="imageParams.options.seed" class="align-middle neutral-border input" type="number" />
-              <button @click="imageParams.options.seed = -1" class="btn btn-secondary mt-2 lg:mt-0 lg:ml-3">Randomize Seed</button>
+              <input :disabled="recalledImageId !== null" v-model="imageParams.options.seed" class="align-middle neutral-border input" type="number" />
+              <button :disabled="recalledImageId !== null" @click="imageParams.options.seed = -1" class="btn btn-secondary mt-2 lg:mt-0 lg:ml-3">Randomize Seed</button>
             </label>
           </div>
           <div v-if="showAdvancedOptions && imageParams.options.subseed !== -1" class="form-control mt-2">
