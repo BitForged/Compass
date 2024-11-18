@@ -680,6 +680,7 @@ onUnmounted(() => {
 
           <textarea v-model="imageParams.options.prompt" class="textarea h-24 textarea-bordered m-3" placeholder="Enter your prompt here! What do you want to see in the image?"></textarea>
           <textarea v-model="imageParams.options.negative_prompt" class="textarea h-24 textarea-bordered m-3" placeholder="Optionally, enter a negative prompt - which describes what you don't want to see in the image."></textarea>
+          <span v-if="imageParams.options.seed !== -1" class="m-3 mt-1 text-sm text-accent">Note: You have a seed set, visit "Generation Settings" => Advanced Options to change/randomize this.</span>
         </label>
       </div>
       <div class="generate-button-container col-span-12 md:col-span-2 pt-0 m-3 md:pt-10">
@@ -777,6 +778,19 @@ onUnmounted(() => {
               <button @click="imageParams.options.seed = -1" class="btn btn-secondary mt-2 lg:mt-0 lg:ml-3">Randomize Seed</button>
             </label>
           </div>
+          <div v-if="showAdvancedOptions && imageParams.options.subseed !== -1" class="form-control mt-2">
+            <label class="cursor-pointer">
+              <span class="ms-2 align-middle">Variation Seed &nbsp;</span>
+              <input v-model="imageParams.options.subseed" disabled class="align-middle neutral-border input" type="number" />
+            </label>
+          </div>
+          <div v-if="showAdvancedOptions && imageParams.options.subseed_strength !== null" class="form-control mt-2 mb-2">
+            <label class="cursor-pointer">
+              <span class="ms-2 align-middle">Variation Strength &nbsp;</span>
+              <input v-model="imageParams.options.subseed_strength" disabled class="align-middle neutral-border input" type="number" />
+            </label>
+          </div>
+          <span v-if="showAdvancedOptions && recalledImageId !== null && (imageParams.options.subseed !== -1 || imageParams.options.subseed_strength !== null)" class="text-sm mt-8">Note: Clear the recalled image to remove the above Variation settings.</span>
         </div>
       </div>
     </div>
