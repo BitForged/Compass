@@ -167,9 +167,9 @@ const toggleBodyScroll = (disable) => {
   }
 };
 
-const initializeData = () => {
+const initializeData = async () => {
   let errored = false;
-  getAvailableModels().then((resp) => {
+  await getAvailableModels().then(async (resp) => {
     availableModels.value = resp.data.models;
     console.log("Fetched models from Navigator", resp.data.models);
     if(resp.data.models.length > 0){
@@ -179,8 +179,7 @@ const initializeData = () => {
     console.error("Failed to fetch models from Navigator", error);
     errored = true;
   });
-
-  getAvailableSamplers().then((resp) => {
+  await getAvailableSamplers().then(async (resp) => {
     availableSamplers.value = resp.data;
     console.log("Fetched samplers from Navigator", resp.data);
     if(resp.data.length > 0){
@@ -191,7 +190,8 @@ const initializeData = () => {
     errored = true;
   });
 
-  retrieveCategories();
+  await retrieveCategories();
+  console.log("Done loading initial data");
 
   if(errored) {
     useAlertStore().addAlert("Failed to fetch data from Navigator, some functionality may work unexpectedly!", "error");
@@ -621,8 +621,8 @@ watch(imageParams, (newValue) => {
 
 }, {deep: true});
 
-const retrieveCategories = () => {
-  getMyCategories().then((res) => {
+const retrieveCategories = async () => {
+  await getMyCategories().then((res) => {
     categories.value = res.data;
   }).catch((error) => {
     console.error("Failed to get categories", error);
@@ -648,9 +648,9 @@ const onJobFailed = (data) => {
   }
 };
 
-onMounted(() => {
+onMounted(async () => {
   toggleBodyScroll(showTipsModal.value);
-  initializeData();
+  await initializeData();
   navigatorRt.on("task-started", onJobStarted);
   navigatorRt.on("task-progress", onJobProgress);
   navigatorRt.on("task-finished", onJobFinished);
@@ -714,7 +714,7 @@ onUnmounted(() => {
         <span v-show="!isGenSettingsExpanded" @click="toggleGenSettings" class="label ms-2">Generation Settings (Hidden; Click to expand)</span>
         <div v-show="recalledImageId !== null && isGenSettingsExpanded" class="m-3">
           <span>Recalled image ID: {{recalledImageId}}</span>
-          <img class="m-3 w-3/4 md:w-1/2 lg:w-1/6" :src="getLinkForJobId(recalledImageId)" alt="Recalled Image" />
+          <img v-if="recalledImageId !== null" class="m-3 w-3/4 md:w-1/2 lg:w-1/6" :src="getLinkForJobId(recalledImageId)" alt="Recalled Image" />
           <button @click="onClearRecallClick" class="m-3 btn btn-info">Clear Recall</button>
           <button @click="onRecallVariationClick(0.3)" :disabled="isWorking" class="m-3 btn btn-accent">Vary (Weak)</button>
           <button @click="onRecallVariationClick(0.7)" :disabled="isWorking" class="m-3 btn btn-accent">Vary (Strong)</button>
