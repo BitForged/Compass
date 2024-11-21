@@ -27,10 +27,6 @@ function getImageForJob(job) {
   return `${import.meta.env.VITE_API_BASE}/api/images/${job.id}`;
 }
 
-function getPreviewForJob(job) {
-  return `${import.meta.env.VITE_API_BASE}/api/previews/${job.id}`;
-}
-
 function onImageClick(job) {
   console.log(`Clicked on image for job ${job.id}`);
   window.open(getImageForJob(job), "_blank").focus();
@@ -172,10 +168,10 @@ onMounted(async () => {
       <p>Click on an image to view it in full size.</p>
     </div>
     <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-      <div v-for="job in getJobs()" :key="job.id" class="card card-custom bordered col-auto hover:animate-pulse">
+      <div  v-for="job in getJobs()" :key="job.id" class="card card-custom bordered col-auto hover:animate-pulse">
         <div class="card-body">
           <div class="image-container">
-            <v-lazy-image @click="onImageClick(job)" class="job-image" :src-placeholder="getPreviewForJob(job)" :src="getImageForJob(job)" width="512" alt="Job Image" />
+            <v-lazy-image @click="onImageClick(job)" class="job-image" src-placeholder="/loading.gif" :src="getImageForJob(job)" width="512" alt="Job Image" />
           </div>
           <div class="card-actions justify-end">
             <button @click="onCategoryUpdate(job.id)" class="btn btn-accent">Categorize</button>
