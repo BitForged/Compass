@@ -127,6 +127,23 @@ const onCategoryUpdateConfirmed = async (categoryId) => {
   });
 };
 
+const onImageLoaded = (element) => {
+  // We receive an HTMLImageElement from the event, which we can use to get the image's natural dimensions
+  let width = element.naturalWidth;
+  let height = element.naturalHeight;
+  console.log(`Image loaded with dimensions: ${element.naturalWidth}x${element.naturalHeight}`);
+  // Find the job ID from the image's src attribute, which is the last part of the URL
+  const jobId = element.src.split("/").pop();
+  console.log(`Image loaded for job ${jobId}`);
+  if(width * height > (1024 * 1024)) {
+    console.log(`Image for job ${jobId} is high resolution`);
+    const job = jobs.value.find(j => j.id === jobId);
+    if(job) {
+      job.isHighRes = true;
+    }
+  }
+};
+
 const fetchCategories = async () => {
   getMyCategories().then((res) => {
     categories.value = res.data;
@@ -171,7 +188,9 @@ onMounted(async () => {
       <div  v-for="job in getJobs()" :key="job.id" class="card card-custom bordered col-auto hover:animate-pulse">
         <div class="card-body">
           <div class="image-container">
-            <v-lazy-image @click="onImageClick(job)" class="job-image" src-placeholder="/loading.gif" :src="getImageForJob(job)" width="512" alt="Job Image" />
+            <v-lazy-image @load="onImageLoaded" @click="onImageClick(job)" class="job-image" src-placeholder="/loading.gif" :src="getImageForJob(job)" width="512" alt="Job Image" />
+            <div v-if="job.isHighRes === true" class="corner-icon">
+            </div>
           </div>
           <div class="card-actions justify-end">
             <button @click="onCategoryUpdate(job.id)" class="btn btn-accent">Categorize</button>
@@ -245,6 +264,16 @@ onMounted(async () => {
   }
 }
 
+.corner-icon {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  border-top: 25px solid #00ff04;
+  border-right: 25px solid transparent;
+  z-index: 10;
+}
 
 .stat-custom {
   background-color: oklch(var(--n));
