@@ -194,7 +194,8 @@ onMounted(async () => {
           </div>
           <div class="card-actions justify-end">
             <button @click="onCategoryUpdate(job.id)" class="btn btn-accent">Categorize</button>
-            <RouterLink :to="{ path: '/generate', query: { recall: job.id}}" class="btn btn-info">Recall</RouterLink>
+            <RouterLink :to="{ name: 'img2img', query: { input: job.id}}" class="btn btn-primary">Img2Img</RouterLink>
+            <RouterLink :to="{ name: 'txt2img', query: { recall: job.id}}" class="btn btn-info">Recall</RouterLink>
             <button v-if="!isPendingDelete(job)" @click="setPendingDelete(job)" class="btn btn-warning">Delete?</button>
             <button v-else @click="onDeleteClick(job)" class="btn btn-error btn-delete">Confirm!</button>
           </div>

@@ -9,7 +9,8 @@ import GenerateView from "@/pages/GenerateView.vue";
 const routes = [
     { path: '/', component: HomeView },
     { path: '/gallery', component: GalleryView, meta:{ requiresAuth: true } },
-    { path: '/generate', component: GenerateView, meta:{ requiresAuth: true } },
+    { path: '/generate/txt2img', component: GenerateView, meta:{ requiresAuth: true }, name: 'txt2img' },
+    { path: '/generate/img2img', component: GenerateView, meta:{ requiresAuth: true }, name: 'img2img' },
 ];
 
 export const router = createRouter({

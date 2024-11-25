@@ -57,7 +57,7 @@ const promptComingSoon = () => {
           <RouterLink to="/gallery" class="btn btn-ghost">Gallery</RouterLink>
         </li>
         <li>
-          <RouterLink to="/generate" class="btn btn-ghost">Generate</RouterLink>
+          <RouterLink :to="{name: 'txt2img'}" class="btn btn-ghost">Generate</RouterLink>
         </li>
       </ul>
     </div>

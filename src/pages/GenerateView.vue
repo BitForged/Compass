@@ -2,6 +2,7 @@
 import {computed, inject, onMounted, onUnmounted, ref, watch} from "vue";
 import { OhVueIcon } from "oh-vue-icons";
 import {
+  generateImg2Img,
   generateTxt2Img,
   getAvailableModels,
   getAvailableSamplers,
@@ -34,6 +35,12 @@ const imageParams = ref({
   },
 });
 
+const img2imgParams = ref({
+  startingInput: null,
+  startingInputJobId: null,
+  inpainting: false
+});
+
 const isWorking = ref(false);
 
 const isConnectedToRt = ref(false);
@@ -61,6 +68,12 @@ const currentJobId = ref(null);
 const isGenSettingsExpanded = ref(false);
 
 const categories = ref([]);
+
+const isImg2Img = computed(() => {
+  return router.currentRoute.value.name === "img2img";
+});
+
+const inpaintingCanvas = ref(null);
 
 const progressClasses = computed(() => {
   if(isModelChanging.value) {
@@ -133,6 +146,13 @@ const isEligibleForUpscale = computed(() => {
 const getLinkForJobId = (jobId) => {
   return `${import.meta.env.VITE_API_BASE}/api/images/${jobId}`;
 };
+
+const getPreviewOfFile = computed(() => {
+  if(img2imgParams.value.startingInput) {
+    return img2imgParams.value.startingInput;
+  }
+  return null;
+});
 
 const toggleGenSettings = () => {
   isGenSettingsExpanded.value = !isGenSettingsExpanded.value;
@@ -228,18 +248,47 @@ const sendJobToNavigator = () => {
         imageParams.value.options.subseed_strength = null;
       }, 1000);
     }
-    generateTxt2Img(job).then((resp) => {
-      console.log("Sent image request to Navigator", resp.data);
-      currentJobId.value = resp.data.job_id;
-      progressText.value = "Job queued, waiting to be picked up by Navigator...";
-      lastJob.value = { ... job, status: 'queued', job_id: resp.data.job_id };
-      isGenSettingsExpanded.value = false;
-      // TODO: Handle queue status
-    }).catch((error) => {
-      console.error("from", error);
-      useAlertStore().addAlert("Failed to send image generation request to Navigator, please try again later!", "error");
-      isWorking.value = false;
-    });
+
+    if(!isImg2Img.value) {
+      generateTxt2Img(job).then((resp) => {
+        console.log("Sent image request to Navigator", resp.data);
+        currentJobId.value = resp.data.job_id;
+        progressText.value = "Job queued, waiting to be picked up by Navigator...";
+        lastJob.value = { ... job, status: 'queued', job_id: resp.data.job_id };
+        isGenSettingsExpanded.value = false;
+        // TODO: Handle queue status
+      }).catch((error) => {
+        console.error("from", error);
+        useAlertStore().addAlert("Failed to send image generation request to Navigator, please try again later!", "error");
+        isWorking.value = false;
+      });
+    } else {
+      if(img2imgParams.value.inpainting) {
+        job.mask = getMaskFromCanvas();
+        if(job.mask === null) {
+          console.error("Failed to get mask from canvas, cannot send job to Navigator");
+          useAlertStore().addAlert("Failed to get mask from canvas, please try again!", "error");
+          isWorking.value = false;
+          return;
+        }
+      }
+      if(img2imgParams.value.startingInputJobId) {
+        job.init_image = `NAVIGATOR_${img2imgParams.value.startingInputJobId}`;
+      } else {
+        job.init_image = stripBase64Prefix(img2imgParams.value.startingInput);
+      }
+      generateImg2Img(job).then((resp) => {
+        console.log("Sent image request to Navigator", resp.data);
+        currentJobId.value = resp.data.job_id;
+        progressText.value = "Job queued, waiting to be picked up by Navigator...";
+        lastJob.value = { ... job, status: 'queued', job_id: resp.data.job_id };
+        isGenSettingsExpanded.value = false;
+      }).catch((error) => {
+        console.error("from", error);
+        useAlertStore().addAlert("Failed to send image generation request to Navigator, please try again later!", "error");
+        isWorking.value = false;
+      });
+    }
   } else {
     console.error("Invalid image parameters, cannot send job to Navigator");
   }
@@ -583,6 +632,10 @@ const getCategoryName = (categoryId) => {
   return "Unknown category";
 }
 
+const stripBase64Prefix = (base64String) => {
+  return base64String.replace(/^data:image\/(png|jpeg|jpg);base64,/, "");
+}
+
 
 watch(showTipsModal, (newValue) => {
   toggleBodyScroll(newValue);
@@ -621,6 +674,113 @@ watch(imageParams, (newValue) => {
 
 }, {deep: true});
 
+watch(img2imgParams, (newValue) => {
+  if(newValue.inpainting) {
+    useAlertStore().addAlert("Inpainting is an experimental feature and may not work as expected. Please use with caution!", "warning");
+    loadInpaintingCanvas();
+  }
+}, {deep: true});
+
+const loadInpaintingCanvas = () => {
+  console.log("Loading inpainting canvas");
+  const canvas = inpaintingCanvas.value;
+
+  if(canvas === null) {
+    console.error("Failed to locate inpainting canvas");
+    return;
+  }
+  const ctx = canvas.getContext("2d");
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  if(img2imgParams.value.startingInputJobId) {
+    getImageForJob.value = getLinkForJobId(img2imgParams.value.startingInputJobId);
+    img.src = getLinkForJobId(img2imgParams.value.startingInputJobId);
+  } else {
+    img.src = img2imgParams.value.startingInput;
+  }
+  img.onload = () => {
+    canvas.width = img.width;
+    canvas.height = img.height;
+    ctx.drawImage(img, 0, 0);
+  };
+
+  // We create a new canvas element to store the pattern
+  const patternCanvas = document.createElement("canvas");
+  const patternCtx = patternCanvas.getContext("2d");
+  patternCanvas.width = 16;
+  patternCanvas.height = 16;
+  patternCtx.fillStyle = "#000";
+  patternCtx.fillRect(0, 0, 8, 8);
+  patternCtx.fillRect(8, 8, 8, 8);
+  const pattern = ctx.createPattern(patternCanvas, "repeat");
+
+  let isDrawing = false;
+  let strokeWidth = 10;
+
+  canvas.addEventListener('mousedown', (e) => {
+    isDrawing = true;
+    ctx.beginPath();
+    ctx.lineWidth = strokeWidth;
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)'; // Semi-transparent black
+    ctx.fillStyle = pattern; // Checkerboard pattern
+    ctx.moveTo(e.offsetX, e.offsetY);
+  });
+
+  canvas.addEventListener('mousemove', (e) => {
+    if (isDrawing) {
+      ctx.lineTo(e.offsetX, e.offsetY);
+      ctx.stroke();
+      ctx.fill();
+    }
+  });
+
+  canvas.addEventListener('mouseup', () => {
+    isDrawing = false;
+  });
+}
+
+const destroyInpaintingCanvas = () => {
+  console.log("Destroying inpainting canvas");
+  const canvas = inpaintingCanvas.value;
+  if(canvas === null) {
+    console.error("Failed to locate inpainting canvas");
+    return;
+  }
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  // Find the "pattern" canvas and clear it
+}
+
+const getMaskFromCanvas = () => {
+  const canvas = inpaintingCanvas.value;
+  if(canvas === null) {
+    console.error("Failed to locate inpainting canvas");
+    return null;
+  }
+  const ctx = canvas.getContext("2d");
+  // Create a shadow-canvas to store the mask
+  const maskCanvas = document.createElement("canvas");
+  const maskCtx = maskCanvas.getContext("2d");
+  maskCanvas.width = canvas.width;
+  maskCanvas.height = canvas.height;
+  maskCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
+
+  // Iterate over the canvas and create a mask
+  const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  for (let i = 0; i < imgData.data.length; i += 4) {
+    // If the pixel is black
+    if(imgData.data[i] === 0 && imgData.data[i + 1] === 0 && imgData.data[i + 2] === 0) {
+      maskCtx.fillStyle = 'black';
+      maskCtx.fillRect((i / 4) % canvas.width, Math.floor((i / 4) / canvas.width), 1, 1);
+    }
+  }
+
+  // Convert the mask canvas to a Base64 string
+  const mask = maskCanvas.toDataURL("image/png").split(",")[1];
+  console.log(mask);
+  return mask;
+}
+
 const retrieveCategories = async () => {
   await getMyCategories().then((res) => {
     categories.value = res.data;
@@ -648,6 +808,46 @@ const onJobFailed = (data) => {
   }
 };
 
+const setStartingInput = (event) => {
+  // console.log("Setting starting input", event.target.files[0]);
+  img2imgParams.value.startingInput = event.target.files[0];
+  // Convert the file to a Base64 string
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    if(e.type === "load") {
+      console.log("Converted starting input to Base64", e.target.result);
+      // Ensure the file is a PNG image
+      if(!e.target.result.startsWith("data:image/png;base64,")) {
+        console.error("Invalid file selected!", e);
+        useAlertStore().addAlert("This file cannot be used for img2img processing, please ensure you utilize a PNG image!", "error");
+        return;
+      }
+      let img = new Image();
+      img.src = e.target.result;
+      img.onload = () => {
+        if(img.width * img.height > (2560 * 1440)) {
+          console.error("Image exceeds maximum resolution", img.width, img.height);
+          useAlertStore().addAlert("This image exceeds the maximum resolution of 2560x1440, please use a smaller image!", "error");
+          return;
+        }
+        console.log("Image dimensions", img.width, img.height);
+        console.log("Image is eligible for img2img processing");
+        img2imgParams.value.startingInput = e.target.result;
+      };
+    } else {
+      console.error("Failed to convert starting input to Base64", e);
+      useAlertStore().addAlert("Failed to process your image, please try again later!", "error");
+    }
+  };
+
+  reader.onerror = (e) => {
+    console.error("Failed to convert starting input to Base64", e);
+    useAlertStore().addAlert("Failed to process your image, please try again later!", "error");
+  };
+
+  reader.readAsDataURL(event.target.files[0]);
+};
+
 onMounted(async () => {
   toggleBodyScroll(showTipsModal.value);
   await initializeData();
@@ -665,6 +865,12 @@ onMounted(async () => {
     recallJobParameters(router.currentRoute.value.query.recall);
     isGenSettingsExpanded.value = true;
   }
+
+  // Detect "input" query parameter, and wire it up to the img2imgParams
+  if (router.currentRoute.value.query.input) {
+    console.log("Detected starting input from query", router.currentRoute.value.query.input);
+    img2imgParams.value.startingInputJobId = router.currentRoute.value.query.input;
+  }
 });
 
 onUnmounted(() => {
@@ -681,14 +887,17 @@ onUnmounted(() => {
 
 <template>
   <div>
+    <div role="tablist" class="tabs tabs-boxed sm:w-3/4 md:w-1/2 m-4 ml-auto mr-auto items-center">
+      <RouterLink :to="{ name: 'txt2img' }" class="tab" active-class="tab-active" role="tab">Txt2Img</RouterLink>
+      <RouterLink :to="{ name: 'img2img' }" class="tab" active-class="tab-active" role="tab">Img2Img</RouterLink>
+    </div>
     <div class="grid grid-cols-12 gap-4">
-
       <div class="prompt-container col-span-12 md:col-span-10">
         <label class="form-control border border-opacity-50 border-gray-500 cornered">
           <span class="label justify-normal ms-2 flex items-center">Prompting
             <oh-vue-icon @click="showTipsModal = true" name="hi-information-circle" class="ml-2"/>
           </span>
-
+          <span v-if="isImg2Img" class="m-3 text-sm text-warning">When using Img2Img, you should try to use a prompt that describes the original image (preferably the original!), while incorporating the changes you wish to see.</span>
           <textarea :disabled="recalledImageId !== null" v-model="imageParams.options.prompt" class="textarea h-24 textarea-bordered m-3" placeholder="Enter your prompt here! What do you want to see in the image?"></textarea>
           <textarea :disabled="recalledImageId !== null" v-model="imageParams.options.negative_prompt" class="textarea h-24 textarea-bordered m-3" placeholder="Optionally, enter a negative prompt - which describes what you don't want to see in the image."></textarea>
           <span v-if="imageParams.options.seed !== -1" class="m-3 mt-1 text-sm text-accent">Note: You have a seed set, visit "Generation Settings" => Advanced Options to change/randomize this.</span>
@@ -705,6 +914,34 @@ onUnmounted(() => {
           <h3 class="text-center text-lg font-bold">Status</h3>
           <p class="text-center mt-2">{{progressText}}</p>
           <progress v-if="currentJobId !== null" class="progress w-full" :class="progressClasses" :value="currentProgress" :max="maxProgress"></progress>
+        </div>
+      </div>
+    </div>
+    <div v-if="isImg2Img" class="mt-5" id="img2img">
+      <div class="form-control border border-opacity-50 border-gray-500 cornered">
+        <span class="label ms-2">Starting Input</span>
+        <div class="m-3">
+          <img v-if="img2imgParams.startingInputJobId !== null" class="m-3 w-3/4 md:w-1/2 lg:w-1/6" :src="getLinkForJobId(img2imgParams.startingInputJobId)" alt="Starting Input" />
+          <span v-if="img2imgParams.startingInputJobId !== null" class="label">Reference image ID: {{img2imgParams.startingInputJobId}}</span>
+          <span v-if="img2imgParams.startingInputJobId !== null" class="label italic text-success">You're using a previous job as a starting point. You can also choose to utilize a custom uploaded image by clearing the input below.</span>
+          <img v-if="img2imgParams.startingInput !== null" class="m-3 w-3/4 md:w-1/2 lg:w-1/6" :src="getPreviewOfFile" alt="Starting Input" />
+          <input v-if="img2imgParams.startingInputJobId === null" type="file" @change="setStartingInput" class="m-3 file-input file-input-bordered file-input-success w-full max-w-xs" /><br/>
+          <button @click="img2imgParams.startingInputJobId = null; img2imgParams.startingInput = null" class="m-3 btn btn-info">Clear Input</button>
+        </div>
+      </div>
+    </div>
+    <div v-if="isImg2Img" class="mt-5" id="img2img-inpainting">
+      <div class="form-control border border-opacity-50 border-gray-500 cornered">
+        <span class="label ms-2">Inpainting</span>
+        <div class="m-3">
+          <label class="cursor-pointer">
+            <input v-model="img2imgParams.inpainting" class="align-middle checkbox checkbox-secondary" type="checkbox" />
+            <span class="ms-2 align-middle">Enable Inpainting?</span>
+            <span class="ms-2 align-middle text-warning italic">Experimental - Not suitable for mobile!</span>
+          </label>
+          <span class="label mt-2">Inpainting is a technique to select parts of an image for replacement. This can be useful for replacing unwanted objects or artifacts from an image.</span>
+          <button v-if="img2imgParams.inpainting" @click="getMaskFromCanvas" class="m-3 btn btn-info">Get Mask</button>
+          <canvas v-show="img2imgParams.inpainting" ref="inpaintingCanvas" class="m-3 border border-opacity-50 border-gray-500 cornered"></canvas>
         </div>
       </div>
     </div>
@@ -821,10 +1058,10 @@ onUnmounted(() => {
             <button :disabled="!lastJob || lastJob.status !== 'completed'" @click="copyImageLink" class="btn btn-info w-full mt-2 relative"><oh-vue-icon class="absolute size-7 w-24 -translate-y-1/2 left-4" animation="wrench" name="hi-clipboard-copy"/>Copy Image Link</button>
             <button v-if="!isDeletePending" :disabled="!lastJob || lastJob.status !== 'completed'" @click="onDeleteClick" class="btn btn-error w-full mt-2 relative"><oh-vue-icon class="absolute top-1/2 size-7 w-24 -translate-y-1/2 left-4" name="md-deleteforever"/>Delete Image</button>
             <button v-else :disabled="!lastJob || lastJob.status !== 'completed'" @click="onDeleteClick" class="btn btn-error w-full mt-2 relative"><oh-vue-icon class="absolute size-7 top-1/2 w-24 -translate-y-1/2 left-4" name="md-deleteforever"/><strong>Click To Confirm</strong></button>
-            <button :disabled="!lastJob || lastJob.status !== 'completed'" @click="recallLastJob" class="btn btn-primary w-full mt-2 relative"><oh-vue-icon class="absolute size-6 w-24 -translate-y-1/2 left-4" animation="spin" name="md-replaycirclefilled"/> Recall Parameters</button>
-            <button :disabled="!lastJob || lastJob.status !== 'completed'" @click="onVariationClick(0.3)" class="btn btn-accent w-full mt-2 relative"><oh-vue-icon class="absolute size-6 w-24 -translate-y-1/2 left-4" animation="pulse" name="gi-perspective-dice-six-faces-random"/> Variation (Subtle)</button>
-            <button :disabled="!lastJob || lastJob.status !== 'completed'" @click="onVariationClick(0.7)" class="btn btn-accent w-full mt-2 relative"><oh-vue-icon class="absolute size-6 w-24 -translate-y-1/2 left-4" animation="pulse" name="gi-perspective-dice-six-faces-random"/> Variation (Strong)</button>
-            <button :disabled="!lastJob || lastJob.status !== 'completed' || !isEligibleForUpscale" @click="onUpscaleClick" class="btn btn-secondary w-full mt-2 relative"><oh-vue-icon class="absolute size-6 w-24 -translate-y-1/2 left-4" animation="pulse" name="fa-angle-double-up"/>Recall & Upscale 2x</button>
+            <button v-if="!isImg2Img" :disabled="!lastJob || lastJob.status !== 'completed'" @click="recallLastJob" class="btn btn-primary w-full mt-2 relative"><oh-vue-icon class="absolute size-6 w-24 -translate-y-1/2 left-4" animation="spin" name="md-replaycirclefilled"/> Recall Parameters</button>
+            <button v-if="!img2imgParams.inpainting" :disabled="!lastJob || lastJob.status !== 'completed'" @click="onVariationClick(0.3)" class="btn btn-accent w-full mt-2 relative"><oh-vue-icon class="absolute size-6 w-24 -translate-y-1/2 left-4" animation="pulse" name="gi-perspective-dice-six-faces-random"/> Variation (Subtle)</button>
+            <button v-if="!img2imgParams.inpainting" :disabled="!lastJob || lastJob.status !== 'completed'" @click="onVariationClick(0.7)" class="btn btn-accent w-full mt-2 relative"><oh-vue-icon class="absolute size-6 w-24 -translate-y-1/2 left-4" animation="pulse" name="gi-perspective-dice-six-faces-random"/> Variation (Strong)</button>
+            <button v-if="!isImg2Img" :disabled="!lastJob || lastJob.status !== 'completed' || !isEligibleForUpscale" @click="onUpscaleClick" class="btn btn-secondary w-full mt-2 relative"><oh-vue-icon class="absolute size-6 w-24 -translate-y-1/2 left-4" animation="pulse" name="fa-angle-double-up"/>Recall & Upscale 2x</button>
           </div>
         </div>
       </div>
