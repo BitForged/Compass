@@ -835,6 +835,8 @@ const setStartingInput = (event) => {
         console.log("Image dimensions", img.width, img.height);
         console.log("Image is eligible for img2img processing");
         img2imgParams.value.startingInput = e.target.result;
+        imageParams.value.width = img.width;
+        imageParams.value.height = img.height;
       };
     } else {
       console.error("Failed to convert starting input to Base64", e);
