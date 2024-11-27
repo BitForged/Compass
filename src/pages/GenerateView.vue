@@ -542,10 +542,12 @@ const onRecallVariationClick = (variation) => {
   });
 }
 
-const recallJobParameters = (imageId, cb) => {
+const recallJobParameters = (imageId, cb, shouldSetRecall = true) => {
   console.log("Recalling job parameters for image ID", imageId);
   getImageInfo(imageId).then((resp) => {
-    recalledImageId.value = imageId;
+    if(shouldSetRecall) {
+      recalledImageId.value = imageId;
+    }
     console.log("Received Image Info:", resp.data);
     let params = resp.data.parameters;
     imageParams.value.options.prompt = params["Prompt"];
@@ -870,6 +872,7 @@ onMounted(async () => {
   if (router.currentRoute.value.query.input) {
     console.log("Detected starting input from query", router.currentRoute.value.query.input);
     img2imgParams.value.startingInputJobId = router.currentRoute.value.query.input;
+    recallJobParameters(router.currentRoute.value.query.input, null, false);
   }
 });
 
@@ -926,7 +929,7 @@ onUnmounted(() => {
           <span v-if="img2imgParams.startingInputJobId !== null" class="label italic text-success">You're using a previous job as a starting point. You can also choose to utilize a custom uploaded image by clearing the input below.</span>
           <img v-if="img2imgParams.startingInput !== null" class="m-3 w-3/4 md:w-1/2 lg:w-1/6" :src="getPreviewOfFile" alt="Starting Input" />
           <input v-if="img2imgParams.startingInputJobId === null" type="file" @change="setStartingInput" class="m-3 file-input file-input-bordered file-input-success w-full max-w-xs" /><br/>
-          <button @click="img2imgParams.startingInputJobId = null; img2imgParams.startingInput = null" class="m-3 btn btn-info">Clear Input</button>
+          <button @click="img2imgParams.startingInputJobId = null; img2imgParams.startingInput = null; imageParams.options.seed = -1" class="m-3 btn btn-info">Clear Input</button>
         </div>
       </div>
     </div>
