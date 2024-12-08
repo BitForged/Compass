@@ -897,7 +897,7 @@ onUnmounted(() => {
       <RouterLink :to="{ name: 'img2img' }" class="tab" active-class="tab-active" role="tab">Img2Img</RouterLink>
     </div>
     <div class="grid grid-cols-12 gap-4">
-      <div class="prompt-container col-span-12 md:col-span-10">
+      <div class="prompt-container col-span-12 md:col-span-9">
         <label class="form-control border border-opacity-50 border-gray-500 cornered">
           <span class="label justify-normal ms-2 flex items-center">Prompting
             <oh-vue-icon @click="showTipsModal = true" name="hi-information-circle" class="ml-2"/>
@@ -909,7 +909,7 @@ onUnmounted(() => {
           <span v-if="recalledImageId !== null" class="m-3 mt-1 text-sm text-error">Warning: You have a recalled image active, the prompt and other settings cannot be changed as changing the settings would cause variations to be invalid. Clear the recalled image in "Generation Settings" to unlock editing of these.</span>
         </label>
       </div>
-      <div class="generate-button-container col-span-12 md:col-span-2 pt-0 m-3 md:pt-10">
+      <div class="generate-button-container col-span-12 md:col-span-3 pt-0 m-3 md:pt-10">
         <div class="row mb-2">
           <button v-if="isImageParamsValid" @click="sendJobToNavigator" :disabled="isWorking || !isConnectedToRt" class="btn btn-success w-full mb-5">Generate</button>
           <button v-else class="btn btn-disabled text-opacity-100 w-full mb-5">Generate</button>
@@ -972,15 +972,15 @@ onUnmounted(() => {
           <div class="form-control">
             <label class="label">Target Width</label>
             <div class="grid grid-cols-12 gap-4">
-              <input disabled v-model="imageParams.width" type="range" :class="rangeColorClasses" class="col-span-8 md:col-span-11 range" min="64" max="4096" />
-              <input :disabled="recalledImageId !== null" v-model="imageParams.width" type="number" class="col-span-4 md:col-span-1  md:w-1/2 input input-primary" @blur="validateImageSizeParams" />
+              <input disabled v-model="imageParams.width" type="range" :class="rangeColorClasses" class="col-span-8 md:col-span-10 range" min="64" max="4096" />
+              <input :disabled="recalledImageId !== null" v-model="imageParams.width" type="number" class="col-span-4 md:col-span-2  md:w-3/4 input input-primary" @blur="validateImageSizeParams" />
             </div>
           </div>
           <div class="form-control pb-3">
             <label class="label">Target Height</label>
             <div class="grid grid-cols-12 gap-4">
-              <input disabled v-model="imageParams.height" type="range" :class="rangeColorClasses" class="col-span-8 md:col-span-11 range" min="64" max="4096" />
-              <input :disabled="recalledImageId !== null" v-model="imageParams.height" type="number" class="col-span-4 md:col-span-1 md:w-1/2 input input-primary" @blur="validateImageSizeParams" />
+              <input disabled v-model="imageParams.height" type="range" :class="rangeColorClasses" class="col-span-8 md:col-span-10 range" min="64" max="4096" />
+              <input :disabled="recalledImageId !== null" v-model="imageParams.height" type="number" class="col-span-4 md:col-span-2 md:w-3/4 input input-primary" @blur="validateImageSizeParams" />
             </div>
             <span v-if="doesSizeRequireUpscale && !doesSizeExceedLimit"><em>Note: Due to the chosen size, your image will generate at half-resolution and will be upscaled to the full resolution.</em></span>
             <span class="text-error" v-if="doesSizeExceedLimit"><em>Error: The chosen size exceeds the maximum size, please choose a lower resolution.</em></span>
@@ -1049,24 +1049,24 @@ onUnmounted(() => {
       </div>
     </div>
     <div class="grid grid-cols-12 gap-4 mt-5">
-      <div class="generated-image-container col-span-12 md:col-span-10">
+      <div class="generated-image-container col-span-12 md:col-span-9">
         <label class="form-control border border-opacity-50 border-gray-500 cornered">
           <span class="label ms-2">Results</span>
           <img v-if="lastJob && (lastJob.status === 'completed' || lastJob.status === 'in_progress')" id="job-image" :src="getImageForJob" alt="Generated Image" class="m-3 pl-2 pr-8 w-full" />
         </label>
       </div>
-      <div class="generated-image-metadata-container col-span-12 md:col-span-2 pt-0 m-3 md:pt-10">
+      <div class="generated-image-metadata-container col-span-12 md:col-span-3 pt-0 m-3 md:pt-10">
         <div class="form-control border border-opacity-50 border-gray-500 cornered">
           <p class="label ms-2 ml-auto mr-auto">Post-processing</p>
           <div class="m-3">
-            <button :disabled="!lastJob || lastJob.status !== 'completed'" @click="saveLastJobImage" class="btn btn-success w-full relative"><oh-vue-icon animation="float" class="absolute w-24 size-6 -translate-y-1/2 left-4" name="fa-download"/>Download Image</button>
-            <button :disabled="!lastJob || lastJob.status !== 'completed'" @click="copyImageLink" class="btn btn-info w-full mt-2 relative"><oh-vue-icon class="absolute size-7 w-24 -translate-y-1/2 left-4" animation="wrench" name="hi-clipboard-copy"/>Copy Image Link</button>
-            <button v-if="!isDeletePending" :disabled="!lastJob || lastJob.status !== 'completed'" @click="onDeleteClick" class="btn btn-error w-full mt-2 relative"><oh-vue-icon class="absolute top-1/2 size-7 w-24 -translate-y-1/2 left-4" name="md-deleteforever"/>Delete Image</button>
-            <button v-else :disabled="!lastJob || lastJob.status !== 'completed'" @click="onDeleteClick" class="btn btn-error w-full mt-2 relative"><oh-vue-icon class="absolute size-7 top-1/2 w-24 -translate-y-1/2 left-4" name="md-deleteforever"/><strong>Click To Confirm</strong></button>
-            <button v-if="!isImg2Img" :disabled="!lastJob || lastJob.status !== 'completed'" @click="recallLastJob" class="btn btn-primary w-full mt-2 relative"><oh-vue-icon class="absolute size-6 w-24 -translate-y-1/2 left-4" animation="spin" name="md-replaycirclefilled"/> Recall Parameters</button>
-            <button v-if="!img2imgParams.inpainting" :disabled="!lastJob || lastJob.status !== 'completed'" @click="onVariationClick(0.3)" class="btn btn-accent w-full mt-2 relative"><oh-vue-icon class="absolute size-6 w-24 -translate-y-1/2 left-4" animation="pulse" name="gi-perspective-dice-six-faces-random"/> Variation (Subtle)</button>
-            <button v-if="!img2imgParams.inpainting" :disabled="!lastJob || lastJob.status !== 'completed'" @click="onVariationClick(0.7)" class="btn btn-accent w-full mt-2 relative"><oh-vue-icon class="absolute size-6 w-24 -translate-y-1/2 left-4" animation="pulse" name="gi-perspective-dice-six-faces-random"/> Variation (Strong)</button>
-            <button v-if="!isImg2Img" :disabled="!lastJob || lastJob.status !== 'completed' || !isEligibleForUpscale" @click="onUpscaleClick" class="btn btn-secondary w-full mt-2 relative"><oh-vue-icon class="absolute size-6 w-24 -translate-y-1/2 left-4" animation="pulse" name="fa-angle-double-up"/>Recall & Upscale 2x</button>
+            <button :disabled="!lastJob || lastJob.status !== 'completed'" @click="saveLastJobImage" class="btn btn-success w-full relative"><oh-vue-icon animation="float" class="size-6" name="fa-download"/>&nbsp;Download Image</button>
+            <button :disabled="!lastJob || lastJob.status !== 'completed'" @click="copyImageLink" class="btn btn-info w-full mt-2 relative"><oh-vue-icon class="size-7" animation="wrench" name="hi-clipboard-copy"/>&nbsp;Copy Image Link</button>
+            <button v-if="!isDeletePending" :disabled="!lastJob || lastJob.status !== 'completed'" @click="onDeleteClick" class="btn btn-error w-full mt-2 relative"><oh-vue-icon class="size-7" name="md-deleteforever"/>&nbsp; Delete Image</button>
+            <button v-else :disabled="!lastJob || lastJob.status !== 'completed'" @click="onDeleteClick" class="btn btn-error w-full mt-2 relative"><oh-vue-icon class="size-7" name="md-deleteforever"/><strong>&nbsp;Click To Confirm</strong></button>
+            <button v-if="!isImg2Img" :disabled="!lastJob || lastJob.status !== 'completed'" @click="recallLastJob" class="btn btn-primary w-full mt-2 relative"><oh-vue-icon class="size-6" animation="spin" name="md-replaycirclefilled"/>&nbsp; Recall Parameters</button>
+            <button v-if="!img2imgParams.inpainting" :disabled="!lastJob || lastJob.status !== 'completed'" @click="onVariationClick(0.3)" class="btn btn-accent w-full mt-2 relative"><oh-vue-icon class="size-6" animation="pulse" name="gi-perspective-dice-six-faces-random"/>&nbsp; Variation (Subtle)</button>
+            <button v-if="!img2imgParams.inpainting" :disabled="!lastJob || lastJob.status !== 'completed'" @click="onVariationClick(0.7)" class="btn btn-accent w-full mt-2 relative"><oh-vue-icon class="size-6" animation="pulse" name="gi-perspective-dice-six-faces-random"/>&nbsp; Variation (Strong)</button>
+            <button v-if="!isImg2Img" :disabled="!lastJob || lastJob.status !== 'completed' || !isEligibleForUpscale" @click="onUpscaleClick" class="btn btn-secondary w-full mt-2 relative"><oh-vue-icon class="size-6" animation="pulse" name="fa-angle-double-up"/>&nbsp;Recall & Upscale 2x</button>
           </div>
         </div>
       </div>
