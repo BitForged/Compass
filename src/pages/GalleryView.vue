@@ -15,6 +15,13 @@ const pendingDeleteTimeoutId = ref(null);
 
 const updatingCategoryForJob = ref(null);
 
+const paginationData = ref({
+  page: 1,
+  perPage: 10,
+  totalItems: 0,
+  totalPages: 0,
+});
+
 function getJobs() {
   if(selectedCategoryId.value === null) {
     return jobs.value;
@@ -43,6 +50,7 @@ function onDeleteClick(job) {
     console.log(`Deleted image for job ${job.id}`);
     jobs.value = jobs.value.filter(j => j.id !== job.id);
     useAlertStore().addAlert(`Image deleted successfully`, "success");
+    fetchPage(paginationData.value.page);
   }).catch((error) => {
     console.error(`Failed to delete image for job ${job.id}`, error);
     useAlertStore().addAlert(`Failed to delete image with ID: ${job.id}`, "error");
@@ -78,6 +86,7 @@ const onCategorySelected = async (categoryId) => {
   console.log(`Selected category with ID: ${categoryId}`);
   selectedCategoryId.value = categoryId;
   await fetchCategories();
+  await fetchPage(1, 10, categoryId);
 };
 
 const onCategoriesChanged = async () => {
@@ -144,6 +153,14 @@ const onImageLoaded = (element) => {
   }
 };
 
+const forceRecaluclateIsJobHighRes = (jobId) => {
+  const element = document.getElementById(jobId);
+  if(!element) {
+    return;
+  }
+  onImageLoaded(element);
+};
+
 const fetchCategories = async () => {
   getMyCategories().then((res) => {
     categories.value = res.data;
@@ -152,9 +169,36 @@ const fetchCategories = async () => {
   });
 }
 
+const nearbyPages = (page, totalPages) => {
+  let nearby = [];
+  const maxDistance = 2;
+  for (let i = Math.max(1, page - maxDistance); i <= Math.min(totalPages, page + maxDistance); i++) {
+    nearby.push(i);
+  }
+  return nearby;
+};
+
+const fetchPage = async (page) => {
+  let retrievedJobs = await getMyJobs(page, 10, selectedCategoryId.value);
+  jobs.value = retrievedJobs.data.images;
+  paginationData.value.page = retrievedJobs.data.currentPage;
+  paginationData.value.totalPages = retrievedJobs.data.totalPages;
+  paginationData.value.totalItems = retrievedJobs.data.count;
+  for(let job of jobs.value) {
+    forceRecaluclateIsJobHighRes(job.id);
+  }
+}
+
+const isPageChecked = (page) => {
+  return paginationData.value.page === page;
+};
+
 onMounted(async () => {
   let retrievedJobs = await getMyJobs();
-  jobs.value = retrievedJobs.data;
+  jobs.value = retrievedJobs.data.images;
+  paginationData.value.page = retrievedJobs.data.currentPage;
+  paginationData.value.totalPages = retrievedJobs.data.totalPages;
+  paginationData.value.totalItems = retrievedJobs.data.count;
   await fetchCategories();
 });
 </script>
@@ -166,7 +210,7 @@ onMounted(async () => {
       <div class="stats shadow  ml-auto mr-auto">
         <div class="stat stat-custom">
           <div class="stat-title">Images Generated</div>
-          <div class="stat-value">{{jobs.length}}</div>
+          <div class="stat-value">{{paginationData.totalItems}}</div>
         </div>
         <div class="stat stat-custom">
           <div class="stat-title"># of Categories</div>
@@ -178,17 +222,24 @@ onMounted(async () => {
         <CategorySelect :category-id="selectedCategoryId" @onCategorySelected="onCategorySelected" @onCategoriesChanged="onCategoriesChanged" allow-modify="true"/>
       </div>
     </div>
+    <div class="w-full flex justify-center items-center">
+      <div class="join mt-5 mb-4 w-fit">
+        <button v-if="paginationData.page > 1" @click="fetchPage(1)" class="btn btn-accent"><<</button>
+        <input v-for="nearbyPage in nearbyPages(paginationData.page, paginationData.totalPages)" :key="'top-paginator-'+nearbyPage" class="join-item btn btn-square" type="radio" name="top-options" :aria-label="nearbyPage" @click="fetchPage(nearbyPage)" :checked="isPageChecked(nearbyPage)">
+        <button v-if="paginationData.page < paginationData.totalPages" @click="fetchPage(paginationData.totalPages)" class="btn btn-accent">>></button>
+      </div>
+    </div>
     <div v-if="getJobs().length === 0" class="text-center mt-2">
       <p>You have no images yet (or they are all filtered out). Generate some through BitJourney on Discord, or via the Generate tab!</p>
     </div>
     <div v-else class="text-gray-400 py-2">
       <p>Click on an image to view it in full size.</p>
     </div>
-    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-4">
       <div  v-for="job in getJobs()" :key="job.id" class="card card-custom bordered col-auto hover:animate-pulse">
         <div class="card-body">
           <div class="image-container">
-            <v-lazy-image @load="onImageLoaded" @click="onImageClick(job)" class="job-image" src-placeholder="/loading.gif" :src="getImageForJob(job)" width="512" alt="Job Image" />
+            <v-lazy-image :id="job.id" @load="onImageLoaded" @click="onImageClick(job)" class="job-image" src-placeholder="/loading.gif" :src="getImageForJob(job)" width="512" alt="Job Image" />
             <div v-if="job.isHighRes === true" class="corner-icon">
             </div>
           </div>
@@ -213,6 +264,13 @@ onMounted(async () => {
             </div>
           </div>
         </div>
+      </div>
+    </div>
+    <div class="w-full flex justify-center items-center">
+      <div class="join mt-4 w-fit">
+        <button v-if="paginationData.page > 1" @click="fetchPage(1)" class="btn btn-accent"><<</button>
+        <input v-for="page in nearbyPages(paginationData.page, paginationData.totalPages)" :key="'bottom-paginator+'+page" class="join-item btn btn-square" type="radio" name="bottom-options" :aria-label="page" @click="fetchPage(page)" :checked="isPageChecked(page)">
+        <button v-if="paginationData.page < paginationData.totalPages" @click="fetchPage(paginationData.totalPages)" class="btn btn-accent">>></button>
       </div>
     </div>
   </div>
