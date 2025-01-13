@@ -47,6 +47,10 @@ const isConnectedToRt = ref(false);
 
 const recalledImageId = ref(null);
 
+const recallTextEntry = ref(null);
+
+const recallEntryFailed = ref(false);
+
 const isRecalledImageEligibleForUpscale = ref(false);
 
 const currentProgress = ref(null);
@@ -437,6 +441,16 @@ const onDeleteClick = () => {
   }
 }
 
+const onRecallClick = () => {
+  recallJobParameters(recallTextEntry.value, null, true, () => {
+    recallTextEntry.value = "";
+    recallEntryFailed.value = true;
+    setTimeout(() => {
+      recallEntryFailed.value = false;
+    }, 3500);
+  })
+}
+
 const extractModelNameFromInfo = (infoText) => {
   // Regular expression to match the "Model: " pattern followed by the model name
   const modelRegex = /Model: ([^,\n]+)/;
@@ -542,7 +556,7 @@ const onRecallVariationClick = (variation) => {
   });
 }
 
-const recallJobParameters = (imageId, cb, shouldSetRecall = true) => {
+const recallJobParameters = (imageId, cb, shouldSetRecall = true, onRecallFail) => {
   console.log("Recalling job parameters for image ID", imageId);
   getImageInfo(imageId).then((resp) => {
     if(shouldSetRecall) {
@@ -612,6 +626,9 @@ const recallJobParameters = (imageId, cb, shouldSetRecall = true) => {
   }).catch((error) => {
     console.error("Failed to recall job parameters", error);
     useAlertStore().addAlert("Failed to recall job parameters, please try again later!", "error");
+    if(onRecallFail) {
+      onRecallFail();
+    }
   });
 }
 
@@ -961,6 +978,13 @@ onUnmounted(() => {
           <button @click="onRecallVariationClick(0.3)" :disabled="isWorking" class="m-3 btn btn-accent">Vary (Weak)</button>
           <button @click="onRecallVariationClick(0.7)" :disabled="isWorking" class="m-3 btn btn-accent">Vary (Strong)</button>
           <button @click="onRecallUpscaleClick" :disabled="!isRecalledImageEligibleForUpscale || isWorking" class="m-3 btn btn-secondary">Upscale 2x</button>
+        </div>
+        <div v-show="recalledImageId === null && isGenSettingsExpanded" class="m-3">
+          <span>You do not currently have an image recalled. Enter an Image ID below to recall:</span><br/>
+          <input v-model="recallTextEntry" type="text" class="mt-4 input input-md input-primary"/>
+          <button :disabled="isWorking" class="ml-1 mb-2 btn btn-primary" @click="onRecallClick">Recall</button><br/>
+          <span v-if="recallEntryFailed" class="text-sm text-error">The specified Image ID could not be recalled. The image may not exist, or Navigator encountered an issue attempting to check the metadata.</span>
+          <span v-if="!recallEntryFailed" class="text-sm text-gray-500 italic">Note: Upon a successful recall, any current generation parameters will be overwritten.</span>
         </div>
         <div v-show="isGenSettingsExpanded" class="m-3">
           <div>
