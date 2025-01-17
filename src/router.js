@@ -5,12 +5,14 @@ import {useAuthStore} from "@/stores/auth";
 import {useAlertStore} from "@/stores/alerts";
 import GalleryView from "@/pages/GalleryView.vue";
 import GenerateView from "@/pages/GenerateView.vue";
+import SettingsView from "@/pages/SettingsView.vue";
 
 const routes = [
     { path: '/', component: HomeView },
     { path: '/gallery', component: GalleryView, meta:{ requiresAuth: true } },
     { path: '/generate/txt2img', component: GenerateView, meta:{ requiresAuth: true }, name: 'txt2img' },
     { path: '/generate/img2img', component: GenerateView, meta:{ requiresAuth: true }, name: 'img2img' },
+    { path: '/settings', component: SettingsView, meta:{ requiresAuth: true }, name: 'settings'}
 ];
 
 export const router = createRouter({

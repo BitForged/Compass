@@ -1,5 +1,5 @@
 <script setup>
-import {computed, inject, onMounted, onUnmounted, ref, watch} from "vue";
+import {computed, inject, onMounted, onUnmounted, ref, toRaw, watch} from "vue";
 import { OhVueIcon } from "oh-vue-icons";
 import {
   generateImg2Img,
@@ -15,6 +15,7 @@ import {useRouter} from "vue-router";
 import {saveAs} from "file-saver";
 import {deleteImage} from "@/services/UserService";
 import CategorySelect from "@/components/CategorySelect.vue";
+import {useSettingsStore} from "@/stores/settings";
 
 const router = useRouter();
 
@@ -40,6 +41,8 @@ const img2imgParams = ref({
   startingInputJobId: null,
   inpainting: false
 });
+
+const settings = useSettingsStore()
 
 const isWorking = ref(false);
 
@@ -100,6 +103,8 @@ const showTipsModal = ref(false);
 const showAdvancedOptions = ref(false);
 const availableModels = ref([]);
 const availableSamplers = ref([]);
+
+const selectedPredefinedPrompt = ref({});
 
 const navigatorRt = inject("$navigator_rt");
 
@@ -190,6 +195,23 @@ const toggleBodyScroll = (disable) => {
     document.body.classList.remove("no-scroll");
   }
 };
+
+const getPredefinedPrompts = computed(() => {
+  return settings.getSetting("predefinedPrompts") !== null ? settings.getSetting("predefinedPrompts") : [];
+})
+
+const applyPredefinedPrompt = () => {
+  const prompt = toRaw(selectedPredefinedPrompt.value);
+  console.debug("Applying predefined prompt:", prompt);
+  if(prompt.prompt.length > 0) {
+    imageParams.value.options.prompt = prompt.prompt;
+    console.debug("Applied positive prompt");
+  }
+  if(prompt.negativePrompt.length > 0) {
+    imageParams.value.options.negative_prompt = prompt.negativePrompt;
+    console.debug("Applied negative prompt");
+  }
+}
 
 const initializeData = async () => {
   let errored = false;
@@ -915,16 +937,23 @@ onUnmounted(() => {
     </div>
     <div class="grid grid-cols-12 gap-4">
       <div class="prompt-container col-span-12 md:col-span-9">
-        <label class="form-control border border-opacity-50 border-gray-500 cornered">
+        <div class="form-control border border-opacity-50 border-gray-500 cornered">
           <span class="label justify-normal ms-2 flex items-center">Prompting
             <oh-vue-icon @click="showTipsModal = true" name="hi-information-circle" class="ml-2"/>
           </span>
           <span v-if="isImg2Img" class="m-3 text-sm text-warning">When using Img2Img, you should try to use a prompt that describes the original image (preferably the original!), while incorporating the changes you wish to see.</span>
+          <span v-if="getPredefinedPrompts.length > 0" class="m-4 text-sm italic">To apply a predefined prompt, choose one below:</span>
+          <div v-if="getPredefinedPrompts.length > 0" class="row">
+            <select v-model="selectedPredefinedPrompt" class="m-3 select select-bordered w-2/3 md:w-2/3 lg:w-2/3 xl:w-1/5">
+              <option v-for="prompt in getPredefinedPrompts" :key="prompt.id" :value="prompt">{{ prompt.name }}</option>
+            </select>
+            <button class="btn btn-success" @click="applyPredefinedPrompt">Apply</button>
+          </div>
           <textarea :disabled="recalledImageId !== null" v-model="imageParams.options.prompt" class="textarea h-24 textarea-bordered m-3" placeholder="Enter your prompt here! What do you want to see in the image?"></textarea>
           <textarea :disabled="recalledImageId !== null" v-model="imageParams.options.negative_prompt" class="textarea h-24 textarea-bordered m-3" placeholder="Optionally, enter a negative prompt - which describes what you don't want to see in the image."></textarea>
           <span v-if="imageParams.options.seed !== -1" class="m-3 mt-1 text-sm text-accent">Note: You have a seed set, visit "Generation Settings" => Advanced Options to change/randomize this.</span>
           <span v-if="recalledImageId !== null" class="m-3 mt-1 text-sm text-error">Warning: You have a recalled image active, the prompt and other settings cannot be changed as changing the settings would cause variations to be invalid. Clear the recalled image in "Generation Settings" to unlock editing of these.</span>
-        </label>
+        </div>
       </div>
       <div class="generate-button-container col-span-12 md:col-span-3 pt-0 m-3 md:pt-10">
         <div class="row mb-2">

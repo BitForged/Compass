@@ -36,12 +36,16 @@ const promptComingSoon = () => {
                 d="M4 6h16M4 12h8m-8 6h16" />
           </svg>
         </div>
+        <!-- Mobile Navigation Dropdown Menu -->
         <ul tabindex="0" class="menu menu-sm dropdown-content bg-base-100 rounded-box z-[1] mt-3 w-52 p-2 shadow">
           <li>
             <RouterLink to="/gallery" class="btn btn-ghost">Gallery</RouterLink>
           </li>
           <li>
             <RouterLink :to="{name: 'txt2img'}" class="btn btn-ghost">Generate</RouterLink>
+          </li>
+          <li>
+            <RouterLink :to="{name: 'settings'}" class="btn btn-ghost">Settings</RouterLink>
           </li>
           <li>
             <AuthButton />
@@ -51,6 +55,7 @@ const promptComingSoon = () => {
       <img src="/compass-logo-md.png" alt="Compass" class="w-8 h-8" />
       <RouterLink to="/" class="btn btn-ghost text-xl">Compass</RouterLink>
     </div>
+    <!-- Desktop Navigation menu -->
     <div class="navbar-center hidden lg:flex">
       <ul class="menu menu-horizontal px-1">
         <li>
@@ -58,6 +63,9 @@ const promptComingSoon = () => {
         </li>
         <li>
           <RouterLink :to="{name: 'txt2img'}" class="btn btn-ghost">Generate</RouterLink>
+        </li>
+        <li>
+          <RouterLink to="/settings" class="btn btn-ghost">Settings</RouterLink>
         </li>
       </ul>
     </div>
