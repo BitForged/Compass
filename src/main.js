@@ -10,7 +10,13 @@ import {
     MdDeleteforever,
     HiClipboardCopy,
     GiPerspectiveDiceSixFacesRandom,
-    CoSpeech
+    CoSpeech,
+    MdCategory,
+    FaEdit,
+    FaQuestion,
+    FaCheck,
+    FaTimes,
+    MdFibernew
 } from "oh-vue-icons/icons";
 import './style.css'
 import App from './App.vue'
@@ -20,7 +26,8 @@ import {registerSW} from "virtual:pwa-register";
 
 const pinia = createPinia();
 addIcons(HiInformationCircle, BiArrowDownUp, FaAngleDoubleUp, FaDownload, MdReplaycirclefilled, MdDeleteforever,
-    HiClipboardCopy, GiPerspectiveDiceSixFacesRandom, CoSpeech);
+    HiClipboardCopy, GiPerspectiveDiceSixFacesRandom, CoSpeech, MdCategory, FaEdit, FaQuestion, FaCheck, FaTimes,
+    MdFibernew);
 
 pinia.use(({ store }) => {
     store.$router = markRaw(router);

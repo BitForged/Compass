@@ -40,6 +40,10 @@ export function addCategory(name) {
     return request({method: "POST", endpoint: "api/user/category", data: {name}});
 }
 
+export function editCategory(categoryId, name) {
+    return request({method: "PATCH", endpoint: `api/user/category/${categoryId}`, data: {name}});
+}
+
 export function setCategory(imageId, categoryId) {
     return request({method: "PUT", endpoint: `api/user/image/${imageId}/category`, data: {categoryId}});
 }

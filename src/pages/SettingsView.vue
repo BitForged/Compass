@@ -1,8 +1,9 @@
 <script setup>
 import { OhVueIcon } from "oh-vue-icons";
-import {onMounted, ref} from "vue";
+import {computed, onMounted, ref} from "vue";
 import SettingsPredefinedPrompts from "@/components/settings/SettingsPredefinedPrompts.vue";
 import {useRouter} from "vue-router";
+import SettingsImageCategories from "@/components/settings/SettingsImageCategories.vue";
 
 const settingsCategories = ref([])
 
@@ -15,6 +16,13 @@ onMounted(() => {
     name: "Predefined Prompts",
     id: "prompts",
     icon: "co-speech",
+    synced: false
+  })
+  settingsCategories.value.push({
+    name: "Image Categories",
+    id: "image-categories",
+    icon: "md-category",
+    synced: true
   })
   if(router.currentRoute.value.query.category) {
     console.debug("Setting category from query", router.currentRoute.value.query.category);
@@ -28,10 +36,20 @@ const setCategory = (id) => {
   router.push({query: {category: id}});
 }
 
+const getAlertSubclass = computed(() => {
+  const category = settingsCategories.value.find((cat) => cat.id === selectedCategoryId.value)
+  // noinspection JSUnresolvedReference
+  if(category && category.synced) {
+    return 'alert-success'
+  }
+
+  return 'alert-info'
+})
+
 </script>
 
 <template>
-  <div role="alert" class="alert alert-info w-fit ml-auto mr-auto mb-5">
+  <div v-if="selectedCategoryId !== null" role="alert" class="alert w-fit ml-auto mr-auto mt-1 mb-5" :class="getAlertSubclass">
     <svg
         xmlns="http://www.w3.org/2000/svg"
         fill="none"
@@ -43,7 +61,8 @@ const setCategory = (id) => {
           stroke-width="2"
           d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
     </svg>
-    <span>Heads up! These settings are currently stored in your browser's local storage, and will not be synced.</span>
+    <span v-if="getAlertSubclass === 'alert-info'">Heads up! These settings are currently stored in your browser's local storage, and will not be synced.</span>
+    <span v-else>These settings <em>are</em> synced to your account, and will persist across devices.</span>
   </div>
 
   <div class="grid grid-cols-12 gap-4 md:min-h-screen">
@@ -56,6 +75,7 @@ const setCategory = (id) => {
     </div>
     <div class="col-span-12 md:col-span-9 xl:col-span-10 p-3">
       <SettingsPredefinedPrompts v-if="selectedCategoryId === 'prompts'"/>
+      <SettingsImageCategories v-if="selectedCategoryId === 'image-categories'"/>
       <div class="max-w-full w-full" v-else>
         <h3 class="text-lg text-center">Select a category to get started!</h3>
       </div>
@@ -79,23 +99,12 @@ const setCategory = (id) => {
   transition: background-color 0.2s;
   border-radius: 8px;
   padding: 0.8rem;
-  margin: 0.5rem;
   font-size: 1.0rem;
-  /*font-weight: 500;*/
   color: #fff;
   background-color: #272a2d;
   border: 1px solid #272a2d;
   text-align: center;
   width: 75%;
-  margin-left: auto;
-  margin-right: auto;
-  /*max-width: 100%;
-  max-height: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  display: block;
-  text-decoration: none;*/
-
+  margin: 0.5rem auto;
 }
 </style>
