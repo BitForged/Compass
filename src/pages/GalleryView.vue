@@ -252,15 +252,18 @@ onMounted(async () => {
           </div>
           <div class="card-footer">
             <CategorySelect v-if="updatingCategoryForJob === job.id" @onCategorySelected="onCategoryUpdateConfirmed" show-remove-option="true" />
-            <div class="grid grid-cols-3 mt-2">
-                <div class="col-auto">
-                  <span class="text-xs text-gray-400">Job ID: {{job.id}}</span>
-                </div>
-                <div class="col-auto">
-                </div>
-                <div v-if="job.category_id !== null" class="col-auto">
-                  <span class="rounded-full bg-gray-600 text-sm px-3 py-1 float-right">{{getCategoryName(job.category_id)}}</span>
-                </div>
+            <div class="grid grid-cols-10 mt-2">
+              <div v-if="job.category_id !== null" class="col-span-3">
+                <span class="text-xs text-gray-400">Job ID: {{job.id}}</span>
+              </div>
+              <div v-else class="col-span-4">
+                <span class="text-xs text-gray-400">Job ID: {{job.id}}</span>
+              </div>
+              <div class="col-span-2">
+              </div>
+              <div v-if="job.category_id !== null" class="col-span-5">
+                <span class="rounded-full bg-gray-600 text-sm px-3 py-1 float-right text-center">{{getCategoryName(job.category_id)}}</span>
+              </div>
             </div>
           </div>
         </div>
