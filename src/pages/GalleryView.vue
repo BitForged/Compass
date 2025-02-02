@@ -235,7 +235,7 @@ onMounted(async () => {
     <div v-else class="text-gray-400 py-2">
       <p>Click on an image to view it in full size.</p>
     </div>
-    <div class="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
       <div  v-for="job in getJobs()" :key="job.id" class="card card-custom bordered col-auto hover:animate-pulse">
         <div class="card-body">
           <div class="image-container">
@@ -243,7 +243,7 @@ onMounted(async () => {
             <div v-if="job.isHighRes === true" class="corner-icon">
             </div>
           </div>
-          <div class="card-actions justify-end">
+          <div class="card-actions grid grid-cols-2 md:grid-cols-2 xl:grid-cols-4 gap-2 mt-2">
             <button @click="onCategoryUpdate(job.id)" class="btn btn-accent">Categorize</button>
             <RouterLink :to="{ name: 'img2img', query: { input: job.id}}" class="btn btn-primary">Img2Img</RouterLink>
             <RouterLink :to="{ name: 'txt2img', query: { recall: job.id}}" class="btn btn-info">Recall</RouterLink>
