@@ -259,7 +259,7 @@ onMounted(async () => {
                 <div class="col-auto">
                 </div>
                 <div v-if="job.category_id !== null" class="col-auto">
-                  <span class="text-xs text-gray-400">Category: {{getCategoryName(job.category_id)}}</span>
+                  <span class="rounded-full bg-gray-600 text-sm px-3 py-1 float-right">{{getCategoryName(job.category_id)}}</span>
                 </div>
             </div>
           </div>
