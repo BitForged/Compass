@@ -1075,40 +1075,44 @@ onUnmounted(() => {
           <div v-if="showAdvancedOptions" class="form-control mt-2">
             <label class="cursor-pointer mb-2">
               <span class="ms-2 align-middle">CFG Scale &nbsp;</span>
-              <input :disabled="recalledImageId !== null" v-model="imageParams.options.cfg_scale" class="align-middle w-1/2 md:w-1/4 lg:w-1/12 neutral-border input" type="number" />
             </label>
+            <input :disabled="recalledImageId !== null" v-model="imageParams.options.cfg_scale" class="align-middle w-1/2 md:w-1/4 lg:w-1/12 neutral-border input" type="number" />
           </div>
-          <div v-if="showAdvancedOptions" class="form-control mt-2">
-            <label class="cursor-pointer">
+          <div v-if="showAdvancedOptions" class="form-control mt-2 grid grid-cols-12 gap-2">
+            <label class="cursor-pointer row col-span-12">
               <span class="ms-2 align-middle">Seed &nbsp;</span>
-              <input :disabled="recalledImageId !== null" v-model="imageParams.options.seed" class="align-middle neutral-border input" type="number" />
-              <button :disabled="recalledImageId !== null" @click="imageParams.options.seed = -1" class="btn btn-secondary mt-2 lg:mt-0 lg:ml-3">Randomize Seed</button>
             </label>
+            <input :disabled="recalledImageId !== null" v-model="imageParams.options.seed" class="col-span-12 md:col-span-3 align-middle neutral-border input" type="number" />
+            <button :disabled="recalledImageId !== null" @click="imageParams.options.seed = -1" class="col-span-12 md:col-span-3 btn btn-secondary">Randomize Seed</button>
           </div>
-          <div v-if="showAdvancedOptions && imageParams.options.subseed !== -1" class="form-control mt-2">
-            <label class="cursor-pointer">
+          <div v-if="showAdvancedOptions && imageParams.options.subseed !== -1" class="form-control mt-2 grid grid-cols-12 gap-2">
+            <label class="cursor-pointer row col-span-12">
               <span class="ms-2 align-middle">Variation Seed &nbsp;</span>
+            </label>
+            <div class="row">
               <input v-model="imageParams.options.subseed" disabled class="align-middle neutral-border input" type="number" />
-            </label>
+            </div>
           </div>
-          <div v-if="showAdvancedOptions && imageParams.options.subseed_strength !== null" class="form-control mt-2 mb-2">
-            <label class="cursor-pointer">
+          <div v-if="showAdvancedOptions && imageParams.options.subseed_strength !== null" class="form-control mt-2 mb-2 grid grid-cols-12 gap-2">
+            <label class="cursor-pointer row col-span-12">
               <span class="ms-2 align-middle">Variation Strength &nbsp;</span>
-              <input v-model="imageParams.options.subseed_strength" disabled class="align-middle neutral-border input" type="number" />
             </label>
+            <div class="row">
+              <input v-model="imageParams.options.subseed_strength" disabled class="align-middle neutral-border input" type="number" />
+            </div>
           </div>
           <span v-if="showAdvancedOptions && recalledImageId !== null && (imageParams.options.subseed !== -1 || imageParams.options.subseed_strength !== null)" class="text-sm mt-8">Note: Clear the recalled image to remove the above Variation settings.</span>
         </div>
       </div>
     </div>
     <div class="grid grid-cols-12 gap-4 mt-5">
-      <div class="generated-image-container col-span-12 md:col-span-9">
+      <div class="generated-image-container col-span-12 lg:col-span-9">
         <label class="form-control border border-opacity-50 border-gray-500 cornered">
           <span class="label ms-2">Results</span>
           <img v-if="lastJob && (lastJob.status === 'completed' || lastJob.status === 'in_progress')" id="job-image" :src="getImageForJob" alt="Generated Image" class="m-3 pl-2 pr-8 w-full" />
         </label>
       </div>
-      <div class="generated-image-metadata-container col-span-12 md:col-span-3 pt-0 m-3 md:pt-10">
+      <div class="generated-image-metadata-container col-span-12 lg:col-span-3 pt-0 m-3 md:pt-10">
         <div class="form-control border border-opacity-50 border-gray-500 cornered">
           <p class="label ms-2 ml-auto mr-auto">Post-processing</p>
           <div class="m-3">
