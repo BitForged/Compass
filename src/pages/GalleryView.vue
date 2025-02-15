@@ -1,10 +1,13 @@
 <script setup>
 import {deleteImage, getMyJobs} from "@/services/UserService";
-import {onMounted, ref} from "vue";
+import {computed, onMounted, ref} from "vue";
 import {useAlertStore} from "@/stores/alerts";
 import VLazyImage from "v-lazy-image";
 import CategorySelect from "@/components/CategorySelect.vue";
 import {getMyCategories, setCategory} from "@/services/NavigatorService";
+import {useRouter} from "vue-router";
+
+const router = useRouter();
 
 const jobs = ref([]);
 const selectedCategoryId = ref(null);
@@ -22,13 +25,18 @@ const paginationData = ref({
   totalPages: 0,
 });
 
-function getJobs() {
-  if(selectedCategoryId.value === null) {
+const currentJobs = computed(() => {
+  console.debug("Computing currentJobs...");
+  if (selectedCategoryId.value === null) {
+    console.debug("Returning all jobs:", jobs.value);
     return jobs.value;
   } else {
-    return jobs.value.filter(j => j.category_id === selectedCategoryId.value);
+    const filteredJobs = jobs.value.filter((j) => j.category_id === selectedCategoryId.value);
+    console.debug("Returning filtered jobs:", filteredJobs);
+    console.debug("Filtered from all jobs:", jobs.value, "to:", filteredJobs);
+    return filteredJobs;
   }
-}
+});
 
 function getImageForJob(job) {
   return `${import.meta.env.VITE_API_BASE}/api/images/${job.id}`;
@@ -83,8 +91,14 @@ const getCategoryName = (categoryId) => {
 };
 
 const onCategorySelected = async (categoryId) => {
-  console.log(`Selected category with ID: ${categoryId}`);
+  console.debug(`Selected category with ID: ${categoryId}`);
   selectedCategoryId.value = categoryId;
+  if(categoryId !== null) {
+    await router.push({query: {category: categoryId}}); // Sets query param in URL so if user refreshes page, the state is kept
+  } else {
+    // Unset category query param
+    await router.push({query: {}});
+  }
   await fetchCategories();
   await fetchPage(1, 10, categoryId);
 };
@@ -179,27 +193,59 @@ const nearbyPages = (page, totalPages) => {
 };
 
 const fetchPage = async (page) => {
-  let retrievedJobs = await getMyJobs(page, 10, selectedCategoryId.value);
+  console.log(`Fetching page: ${page}, selectedCategoryId: ${selectedCategoryId.value}`);
+  // Get current query parameters, so the next call doesn't overwrite it
+  const params = router.currentRoute.value.query;
+  // Remove current page param from params list so it doesn't get overwritten
+  delete params.page;
+  await router.push({query: {page: page, ...params}})
+  const retrievedJobs = await getMyJobs(page, 10, selectedCategoryId.value);
+
+  console.debug("Fetched jobs:", retrievedJobs.data.images);
   jobs.value = retrievedJobs.data.images;
+
   paginationData.value.page = retrievedJobs.data.currentPage;
   paginationData.value.totalPages = retrievedJobs.data.totalPages;
   paginationData.value.totalItems = retrievedJobs.data.count;
-  for(let job of jobs.value) {
+
+  for (let job of jobs.value) {
     forceRecaluclateIsJobHighRes(job.id);
   }
 }
 
-const isPageChecked = (page) => {
+const isPageHighlighted = (page) => {
   return paginationData.value.page === page;
 };
 
 onMounted(async () => {
-  let retrievedJobs = await getMyJobs();
-  jobs.value = retrievedJobs.data.images;
-  paginationData.value.page = retrievedJobs.data.currentPage;
-  paginationData.value.totalPages = retrievedJobs.data.totalPages;
-  paginationData.value.totalItems = retrievedJobs.data.count;
-  await fetchCategories();
+  try {
+    // Fetch initial data (jobs & categories)
+    const retrievedJobs = await getMyJobs();
+    jobs.value = retrievedJobs.data.images;
+    paginationData.value.page = retrievedJobs.data.currentPage;
+    paginationData.value.totalPages = retrievedJobs.data.totalPages;
+    paginationData.value.totalItems = retrievedJobs.data.count;
+
+    await fetchCategories();
+
+    // Handle query parameter for category and page selection
+    const queryCategory = parseInt(router.currentRoute.value.query.category);
+    if (queryCategory) {
+      console.debug("Setting category from query", queryCategory);
+      selectedCategoryId.value = queryCategory;
+      await onCategorySelected(queryCategory);
+    }
+    const queryPage = parseInt(router.currentRoute.value.query.page);
+    if (queryPage) {
+      console.debug("Setting page from query", queryPage);
+      await fetchPage(queryPage);
+    } else {
+      await fetchPage(1);
+    }
+
+  } catch (error) {
+    console.error("Error on component mount:", error);
+  }
 });
 </script>
 
@@ -225,18 +271,18 @@ onMounted(async () => {
     <div class="w-full flex justify-center items-center">
       <div class="join mt-5 mb-4 w-fit">
         <button v-if="paginationData.page > 1" @click="fetchPage(1)" class="btn btn-accent"><<</button>
-        <input v-for="nearbyPage in nearbyPages(paginationData.page, paginationData.totalPages)" :key="'top-paginator-'+nearbyPage" class="join-item btn btn-square" type="radio" name="top-options" :aria-label="nearbyPage" @click="fetchPage(nearbyPage)" :checked="isPageChecked(nearbyPage)">
+        <input v-for="nearbyPage in nearbyPages(paginationData.page, paginationData.totalPages)" :key="'top-paginator-'+nearbyPage" class="join-item btn btn-square" type="radio" name="top-options" :aria-label="nearbyPage" @click="fetchPage(nearbyPage)" :checked="isPageHighlighted(nearbyPage)">
         <button v-if="paginationData.page < paginationData.totalPages" @click="fetchPage(paginationData.totalPages)" class="btn btn-accent">>></button>
       </div>
     </div>
-    <div v-if="getJobs().length === 0" class="text-center mt-2">
+    <div v-if="currentJobs.length === 0" class="text-center mt-2">
       <p>You have no images yet (or they are all filtered out). Generate some through BitJourney on Discord, or via the Generate tab!</p>
     </div>
     <div v-else class="text-gray-400 py-2">
       <p>Click on an image to view it in full size.</p>
     </div>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-      <div  v-for="job in getJobs()" :key="job.id" class="card card-custom bordered col-auto hover:animate-pulse">
+      <div  v-for="job in currentJobs" :key="job.id" class="card card-custom bordered col-auto hover:animate-pulse">
         <div class="card-body">
           <div class="image-container">
             <v-lazy-image :id="job.id" @load="onImageLoaded" @click="onImageClick(job)" class="job-image" src-placeholder="/loading.gif" :src="getImageForJob(job)" width="512" alt="Job Image" />
@@ -272,7 +318,7 @@ onMounted(async () => {
     <div class="w-full flex justify-center items-center">
       <div class="join mt-4 w-fit">
         <button v-if="paginationData.page > 1" @click="fetchPage(1)" class="btn btn-accent"><<</button>
-        <input v-for="page in nearbyPages(paginationData.page, paginationData.totalPages)" :key="'bottom-paginator+'+page" class="join-item btn btn-square" type="radio" name="bottom-options" :aria-label="page" @click="fetchPage(page)" :checked="isPageChecked(page)">
+        <input v-for="page in nearbyPages(paginationData.page, paginationData.totalPages)" :key="'bottom-paginator+'+page" class="join-item btn btn-square" type="radio" name="bottom-options" :aria-label="page" @click="fetchPage(page)" :checked="isPageHighlighted(page)">
         <button v-if="paginationData.page < paginationData.totalPages" @click="fetchPage(paginationData.totalPages)" class="btn btn-accent">>></button>
       </div>
     </div>
