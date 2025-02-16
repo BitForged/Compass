@@ -1,13 +1,13 @@
 <script setup>
 import { OhVueIcon } from "oh-vue-icons";
-import {computed, onMounted, ref} from "vue";
-import SettingsPredefinedPrompts from "@/components/settings/SettingsPredefinedPrompts.vue";
+import {computed, onMounted, ref, shallowRef} from "vue";
 import {useRouter} from "vue-router";
-import SettingsImageCategories from "@/components/settings/SettingsImageCategories.vue";
 
 const settingsCategories = ref([])
 
 const selectedCategoryId = ref(null)
+
+const settingsTemplate = shallowRef()
 
 const router = useRouter()
 
@@ -16,12 +16,14 @@ onMounted(() => {
     name: "Predefined Prompts",
     id: "prompts",
     icon: "co-speech",
+    template_name: "SettingsPredefinedPrompts",
     synced: false
   })
   settingsCategories.value.push({
     name: "Image Categories",
     id: "image-categories",
     icon: "md-category",
+    template_name: "SettingsImageCategories",
     synced: true
   })
   if(router.currentRoute.value.query.category) {
@@ -30,10 +32,13 @@ onMounted(() => {
   }
 })
 
-const setCategory = (id) => {
+const setCategory = async (id) => {
   selectedCategoryId.value = id;
   console.debug("Selected category: ", id);
-  router.push({query: {category: id}});
+  await router.push({query: {category: id}});
+  settingsTemplate.value = (
+      await import(`@/components/settings/${settingsCategories.value.find((cat) => cat.id === id).template_name}.vue`)
+  ).default
 }
 
 const getAlertSubclass = computed(() => {
@@ -74,8 +79,7 @@ const getAlertSubclass = computed(() => {
       </ul>
     </div>
     <div class="col-span-12 md:col-span-9 xl:col-span-10 p-3">
-      <SettingsPredefinedPrompts v-if="selectedCategoryId === 'prompts'"/>
-      <SettingsImageCategories v-if="selectedCategoryId === 'image-categories'"/>
+      <component :is="settingsTemplate" v-if="settingsTemplate"/>
       <div class="max-w-full w-full" v-else>
         <h3 class="text-lg text-center">Select a category to get started!</h3>
       </div>
