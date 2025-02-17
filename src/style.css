@@ -5,3 +5,29 @@
 .no-scroll {
     overflow: hidden;
 }
+
+.explanation > h1 {
+    font-size: 1.5rem;
+    margin-bottom: 10px;
+    margin-top: 0;
+    font-weight: 500;
+    color: #fff;
+    text-align: center;
+    width: 100%;
+}
+
+.explanation > p {
+    color: #fff;
+    width: 100%;
+    margin-bottom: 10px;
+    margin-top: 0;
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.5;
+    text-align: center;
+}
+
+.explanation > p + .subtle {
+    color: #6b7280;
+    opacity: 0.9;
+}

@@ -17,10 +17,16 @@ export const useSettingsStore = defineStore('settings', () => {
         return settings.value[key] || null
     }
 
+    function deleteSetting(key) {
+        console.debug(`Deleting setting ${key}`)
+        delete settings.value[key]
+        saveSettings()
+    }
+
     function saveSettings() {
         localStorage.setItem('settings', JSON.stringify(settings.value))
         console.debug("Settings saved:", toRaw(settings.value))
     }
 
-    return {setSetting, getSetting}
+    return {setSetting, getSetting, deleteSetting}
 })

@@ -26,6 +26,12 @@ onMounted(() => {
     template_name: "SettingsImageCategories",
     synced: true
   })
+  settingsCategories.value.push({
+    name: "Image Generation",
+    id: "image-generation",
+    icon: "md-autofixhigh",
+    template_name: "SettingsImageGeneration",
+  })
   if(router.currentRoute.value.query.category) {
     console.debug("Setting category from query", router.currentRoute.value.query.category);
     setCategory(router.currentRoute.value.query.category);
