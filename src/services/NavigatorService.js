@@ -5,7 +5,7 @@ export function getAvailableModels() {
 }
 
 export function getAvailableSamplers() {
-    return request({endpoint: "api/samplers"});
+    return request({endpoint: "api/samplers?all=true"});
 }
 
 export function generateTxt2Img(jobData) {
