@@ -24,7 +24,10 @@ export function generateImg2Img(jobData) {
     return request({method: "POST", endpoint: "api/queue/user/img2img", data: jobData});
 }
 
-export function upscaleImageWithHR(jobId) {
+export function upscaleImageWithHR(jobId, jobData = undefined) {
+    if(jobData) {
+        return request({method: "POST", endpoint: `api/queue/user/txt2img/upscale-hrf/${jobId}`, data: jobData});
+    }
     return request({method: "POST", endpoint: `api/queue/user/txt2img/upscale-hrf/${jobId}`});
 }
 

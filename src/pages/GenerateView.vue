@@ -271,6 +271,23 @@ const sendJobToNavigator = () => {
       seed: imageParams.value.options.seed,
       categoryId: imageParams.value.categoryId
     };
+
+    // Check to see if we have custom HRF steps defined, if so, attach it to the Navigator request
+    const upscaleSteps = settings.getSetting("upscaleSteps")
+    if(upscaleSteps !== undefined && upscaleSteps !== null && upscaleSteps !== 1) {
+      job.hrf_steps = upscaleSteps;
+    }
+
+    const upscaleDenoisingStrength = settings.getSetting("upscaleDenoisingStrength")
+    if(upscaleDenoisingStrength !== undefined && upscaleDenoisingStrength !== null && upscaleDenoisingStrength !== -1) {
+      job.denoising_strength = upscaleDenoisingStrength;
+    }
+
+    const upscaler = settings.getSetting("upscaler")
+    if(upscaler !== undefined && upscaler !== null && upscaler !== "DEFAULT") {
+      job.upscaler_name = upscaler;
+    }
+
     if(imageParams.value.options.subseed_strength) {
       console.log(`Subseed strength (variation: ${imageParams.value.options.subseed_strength})`);
       job.subseed_strength = imageParams.value.options.subseed_strength;
@@ -334,7 +351,23 @@ const sendJobToNavigator = () => {
 const sendUpscaleJobToNavigator = (jobId) => {
   console.log("Sending upscale job to Navigator", jobId);
   isWorking.value = true;
-  upscaleImageWithHR(jobId).then((resp) => {
+  let job = {}
+  // Check to see if we have custom HRF steps defined, if so, attach it to the Navigator request
+  const upscaleSteps = settings.getSetting("upscaleSteps")
+  if(upscaleSteps !== undefined && upscaleSteps !== null && upscaleSteps !== 1) {
+    job.hrf_steps = upscaleSteps;
+  }
+
+  const upscaleDenoisingStrength = settings.getSetting("upscaleDenoisingStrength")
+  if(upscaleDenoisingStrength !== undefined && upscaleDenoisingStrength !== null && upscaleDenoisingStrength !== -1) {
+    job.denoising_strength = upscaleDenoisingStrength;
+  }
+
+  const upscaler = settings.getSetting("upscaler")
+  if(upscaler !== undefined && upscaler !== null && upscaler !== "DEFAULT") {
+    job.upscaler_name = upscaler;
+  }
+  upscaleImageWithHR(jobId, job).then((resp) => {
     console.log("Sent upscale request to Navigator", resp.data);
     currentJobId.value = resp.data.job_id;
     progressText.value = "Job queued, waiting to be picked up by Navigator...";
