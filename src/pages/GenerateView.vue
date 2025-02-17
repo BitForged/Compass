@@ -274,7 +274,7 @@ const sendJobToNavigator = () => {
 
     // Check to see if we have custom HRF steps defined, if so, attach it to the Navigator request
     const upscaleSteps = settings.getSetting("upscaleSteps")
-    if(upscaleSteps !== undefined && upscaleSteps !== null && upscaleSteps !== 1) {
+    if(upscaleSteps !== undefined && upscaleSteps !== null && upscaleSteps !== -1) {
       job.hrf_steps = upscaleSteps;
     }
 
@@ -354,7 +354,7 @@ const sendUpscaleJobToNavigator = (jobId) => {
   let job = {}
   // Check to see if we have custom HRF steps defined, if so, attach it to the Navigator request
   const upscaleSteps = settings.getSetting("upscaleSteps")
-  if(upscaleSteps !== undefined && upscaleSteps !== null && upscaleSteps !== 1) {
+  if(upscaleSteps !== undefined && upscaleSteps !== null && upscaleSteps !== -1) {
     job.hrf_steps = upscaleSteps;
   }
 

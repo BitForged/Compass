@@ -11,7 +11,7 @@ const explainUpscaleSimilarity = ref(false)
 const explainUpscalerSelection = ref(false)
 
 const upscaleSettings = ref({
-  steps: 1,
+  steps: -1,
   denoisingStrength: -1,
   upscaler: "DEFAULT",
 })
