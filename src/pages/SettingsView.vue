@@ -28,7 +28,7 @@ onMounted(() => {
   })
   if(router.currentRoute.value.query.category) {
     console.debug("Setting category from query", router.currentRoute.value.query.category);
-    selectedCategoryId.value = router.currentRoute.value.query.category;
+    setCategory(router.currentRoute.value.query.category);
   }
 })
 
@@ -66,7 +66,7 @@ const getAlertSubclass = computed(() => {
           stroke-width="2"
           d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
     </svg>
-    <span v-if="getAlertSubclass === 'alert-info'">Heads up! These settings are currently stored in your browser's local storage, and will not be synced.</span>
+    <span v-if="getAlertSubclass === 'alert-info'">Heads up! These settings are currently stored in your browser's local storage, and are specific to this device.</span>
     <span v-else>These settings <em>are</em> synced to your account, and will persist across devices.</span>
   </div>
 
@@ -75,7 +75,7 @@ const getAlertSubclass = computed(() => {
     <div class="col-span-12 md:col-span-3 xl:col-span-2 right-divider md:h-full max-h-full">
       <h1 class="text-lg text-center mb-3">Settings Categories</h1>
       <ul class="list-none">
-        <li v-for="category in settingsCategories" @click="setCategory(category.id)" class="settings-item py-2 max-sm:text-center"><oh-vue-icon :name="category.icon"/>&nbsp; {{category.name}}</li>
+        <li v-for="category in settingsCategories" @click="setCategory(category.id)" class="settings-item py-2 max-sm:text-center" :class="selectedCategoryId === category.id ? 'settings-item-selected' : ''"><oh-vue-icon :name="category.icon"/>&nbsp; {{category.name}}</li>
       </ul>
     </div>
     <div class="col-span-12 md:col-span-9 xl:col-span-10 p-3">
@@ -110,5 +110,13 @@ const getAlertSubclass = computed(() => {
   text-align: center;
   width: 75%;
   margin: 0.5rem auto;
+}
+
+.settings-item:hover {
+  background-color: #424141;
+}
+
+.settings-item-selected {
+  background-color: #076cd0 !important;
 }
 </style>
