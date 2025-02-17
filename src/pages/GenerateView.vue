@@ -5,7 +5,7 @@ import {
   generateImg2Img,
   generateTxt2Img,
   getAvailableModels,
-  getAvailableSamplers,
+  getAvailableSamplers, getAvailableSchedulers,
   getImageInfo, getMetadataForImage, getMyCategories,
   interruptJob, upscaleImageWithHR
 } from "@/services/NavigatorService";
@@ -28,6 +28,7 @@ const imageParams = ref({
     negative_prompt: "",
     model: {},
     sampler: {},
+    scheduler: {},
     steps: 50,
     cfg_scale: 7.0,
     seed: -1,
@@ -103,6 +104,7 @@ const showTipsModal = ref(false);
 const showAdvancedOptions = ref(false);
 const availableModels = ref([]);
 const availableSamplers = ref([]);
+const availableSchedulers = ref([]);
 
 const selectedPredefinedPrompt = ref({});
 
@@ -236,6 +238,14 @@ const initializeData = async () => {
     errored = true;
   });
 
+  await getAvailableSchedulers().then(async (resp) => {
+    availableSchedulers.value = resp.data;
+    console.log("Fetched schedulers from Navigator", resp.data);
+    if(resp.data.length > 0){
+      imageParams.value.options.scheduler = resp.data[0];
+    }
+  })
+
   await retrieveCategories();
   console.log("Done loading initial data");
 
@@ -253,6 +263,7 @@ const sendJobToNavigator = () => {
       negative_prompt: imageParams.value.options.negative_prompt,
       model_name: imageParams.value.options.model.model_name,
       sampler_name: imageParams.value.options.sampler.name,
+      scheduler_name: imageParams.value.options.scheduler.name,
       steps: imageParams.value.options.steps,
       width: imageParams.value.width,
       height: imageParams.value.height,
@@ -596,6 +607,7 @@ const recallJobParameters = (imageId, cb, shouldSetRecall = true, onRecallFail) 
       console.error(`Failed to locate model (${extractedModelName}) from image info, using default model`);
     }
     imageParams.value.options.sampler = availableSamplers.value.find((sampler) => sampler.name === params.Sampler);
+    imageParams.value.options.scheduler = availableSchedulers.value.find((scheduler) => scheduler.label === params["Schedule type"])
     imageParams.value.options.steps = params["Steps"];
     if(params["Hires resize-1"] !== 0 || params["Hires resize-2"] !== 0) {
       imageParams.value.width = params["Hires resize-1"];
@@ -1064,6 +1076,14 @@ onUnmounted(() => {
             </label>
             <select :disabled="recalledImageId !== null" v-model="imageParams.options.sampler" class="select neutral-border mb-2">
               <option v-for="sampler in availableSamplers" :value="sampler" :key="sampler.name">{{sampler.name}}</option>
+            </select>
+          </div>
+          <div v-if="showAdvancedOptions" class="form-control">
+            <label class="mb-2">
+              <span class="ms-2">Scheduler</span>
+            </label>
+            <select :disabled="recalledImageId !== null" v-model="imageParams.options.scheduler" class="select neutral-border mb-2">
+              <option v-for="scheduler in availableSchedulers" :value="scheduler" :key="scheduler.name">{{scheduler.label}}</option>
             </select>
           </div>
           <div v-if="showAdvancedOptions" class="form-control">

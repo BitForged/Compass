@@ -8,6 +8,14 @@ export function getAvailableSamplers() {
     return request({endpoint: "api/samplers?all=true"});
 }
 
+export function getAvailableSchedulers() {
+    return request({endpoint: "api/schedulers"});
+}
+
+export function getAvailableUpscalers() {
+    return request({endpoint: "api/upscalers"});
+}
+
 export function generateTxt2Img(jobData) {
     return request({method: "POST", endpoint: "api/queue/user/txt2img", data: jobData});
 }
