@@ -145,7 +145,7 @@ const onCategorySelected = (categoryId) => {
 };
 
 const isInterruptible = computed(() => {
-  return (currentJobId.value && currentProgress.value);
+  return (currentJobId.value !== null);
 });
 
 const isEligibleForUpscale = computed(() => {
@@ -448,10 +448,22 @@ const onJobFinished = (data) => {
 const onInterruptClicked = () => {
   if(currentJobId.value) {
     console.log("Interrupting job", currentJobId.value);
-    interruptJob(currentJobId.value).then((_) => {
+    interruptJob(currentJobId.value).then((res) => {
       console.log(`Interrupted job ${currentJobId.value}`);
       useAlertStore().addAlert(`Job interrupted successfully`, "success");
-      progressText.value = "Job interrupted!";
+      if(res.data.status !== undefined && res.data.status === "removed") {
+        // The job was removed from the queue, reset the UI back to the expected state
+        currentJobId.value = null;
+        lastJob.value = null;
+        isWorking.value = false;
+        progressText.value = "Job cancelled!";
+        setTimeout(() => {
+          progressText.value = "Nothing to report yet...";
+        }, 2000)
+      } else {
+        // The job was interrupted, since this will still fire off the job-finished event, we don't need to do much.
+        progressText.value = "Job interrupted, waiting for final results!";
+      }
     }).catch((error) => {
       console.error(`Failed to interrupt job ${currentJobId.value}`, error);
       useAlertStore().addAlert(`Failed to interrupt job with ID: ${currentJobId.value}`, "error");
