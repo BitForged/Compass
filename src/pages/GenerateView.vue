@@ -34,6 +34,7 @@ const imageParams = ref({
     seed: -1,
     subseed: -1,
     subseed_strength: null,
+    image_enhancements: false
   },
 });
 
@@ -301,6 +302,10 @@ const sendJobToNavigator = () => {
       setTimeout(() => {
         imageParams.value.options.subseed_strength = null;
       }, 1000);
+    }
+
+    if(imageParams.value.options.image_enhancements) {
+      job.image_enhancements = true;
     }
 
     if(!isImg2Img.value) {
@@ -675,6 +680,11 @@ const recallJobParameters = (imageId, cb, shouldSetRecall = true, onRecallFail) 
 
     imageParams.value.options.cfg_scale = params["CFG scale"];
     imageParams.value.options.seed = params.Seed;
+
+    // Check to see if image enhancements ("FreeU" or "SAG - SelfAttentionGuidance") was applied to the recalled image
+    if(params["freeu_enabled"] === "True" || params["sag_enabled"] === "True") {
+      imageParams.value.options.image_enhancements = true;
+    }
 
     getMetadataForImage(imageId).then((metadata) => {
       console.log("Received Image Metadata:", metadata.data);
@@ -1096,6 +1106,12 @@ onUnmounted(() => {
             <select :disabled="recalledImageId !== null" id="model-selector" v-model="imageParams.options.model" class="select neutral-border mb-2">
               <option v-for="model in availableModels" :value="model" :key="model.model_name">{{model.friendly_name ? model.friendly_name : model.model_name}}</option>
             </select>
+          </div>
+          <div class="form-control">
+            <label class="cursor-pointer mb-2 mt-2">
+              <input type="checkbox" :disabled="recalledImageId !== null" v-model="imageParams.options.image_enhancements" class="checkbox checkbox-primary align-middle">
+              <span class="ms-2">Enable Image Enhancements?</span>
+            </label>
           </div>
           <div class="form-control mt-2 mb-2">
             <label class="cursor-pointer">
