@@ -588,19 +588,21 @@ const copyImageLink = () => {
 // 0 is the weakest variation (barely any change), 1 is the strongest (most change)
 const onVariationClick = (variation) => {
   console.log("Clicked on variation", variation);
+  isWorking.value = true;
   recallLastJob(() => {
     imageParams.value.options.subseed = -1;
     imageParams.value.options.subseed_strength = variation;
     setTimeout(() => {
-      sendJobToNavigator();
+      sendJobToNavigator(); // If this fails, it will reset the `isWorking` state
     }, 500);
   })
 }
 
 const onUpscaleClick = () => {
   console.log("Upscaling image");
+  isWorking.value = true;
   recallLastJob(() => {
-    sendUpscaleJobToNavigator(lastJob.value.job_id);
+    sendUpscaleJobToNavigator(lastJob.value.job_id); // If this fails, it will reset the `isWorking` state
     // After the user has upscaled the image, they probably don't want to re-generate the base image
     // on the next run, so reset the seed to -1
     imageParams.value.options.seed = -1;
@@ -611,6 +613,7 @@ const onUpscaleClick = () => {
 
 const onRecallUpscaleClick = () => {
   console.log("Recalling and upscaling image");
+  isWorking.value = true;
   recallJobParameters(recalledImageId.value, () => {
     const originalWidth = imageParams.value.width;
     const originalHeight = imageParams.value.height;
@@ -621,7 +624,7 @@ const onRecallUpscaleClick = () => {
       console.error("Image is not eligible for upscaling!");
       return;
     }
-    sendUpscaleJobToNavigator(recalledImageId.value);
+    sendUpscaleJobToNavigator(recalledImageId.value); // If this fails, it will reset the `isWorking` state
     imageParams.value.options.seed = -1;
     imageParams.value.options.subseed = null;
     imageParams.value.options.subseed_strength = null;
@@ -630,6 +633,7 @@ const onRecallUpscaleClick = () => {
 
 const onRecallVariationClick = (variation) => {
   console.log("Recalling and varying image", variation);
+  isWorking.value = true;
   recallJobParameters(recalledImageId.value, () => {
     imageParams.value.options.subseed_strength = variation;
     imageParams.value.options.subseed = -1;
