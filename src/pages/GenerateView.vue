@@ -1056,7 +1056,7 @@ onUnmounted(() => {
         <span v-show="!isGenSettingsExpanded" @click="toggleGenSettings" class="label ms-2">Generation Settings (Hidden; Click to expand)</span>
         <div v-show="recalledImageId !== null && isGenSettingsExpanded" class="m-3">
           <span>Recalled image ID: {{recalledImageId}}</span>
-          <img v-if="recalledImageId !== null" class="m-3 w-3/4 md:w-1/2 lg:w-1/6" :src="getLinkForJobId(recalledImageId)" alt="Recalled Image" />
+          <img v-if="recalledImageId !== null" class="md:w-1/2 xl:w-1/4 rounded-md drop-shadow-lg mt-3" :src="getLinkForJobId(recalledImageId)" alt="Recalled Image" />
           <div class="grid grid-cols-2 gap-4 xl:w-1/4 mt-3">
             <button @click="onClearRecallClick" class="btn btn-info">Clear Recall</button>
             <button @click="onRecallVariationClick(0.3)" :disabled="isWorking" class="btn btn-accent">Vary (Weak)</button>
@@ -1179,7 +1179,10 @@ onUnmounted(() => {
       <div class="generated-image-container col-span-12 lg:col-span-9">
         <label class="form-control border border-opacity-50 border-gray-500 cornered">
           <span class="label ms-2">Results</span>
-          <img v-if="lastJob && (lastJob.status === 'completed' || lastJob.status === 'in_progress')" id="job-image" :src="getImageForJob" alt="Generated Image" class="m-3 pl-2 pr-8 w-full" />
+          <!--suppress HtmlUnknownTag -->
+          <div class="pl-2 pr-8 m-3 w-full">
+            <img v-if="lastJob && (lastJob.status === 'completed' || lastJob.status === 'in_progress')" id="job-image" :src="getImageForJob" alt="Generated Image" class="w-full rounded-lg drop-shadow-lg" />
+          </div>
         </label>
       </div>
       <div class="generated-image-metadata-container col-span-12 lg:col-span-3 pt-0 m-3 md:pt-10">
