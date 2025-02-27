@@ -1057,10 +1057,12 @@ onUnmounted(() => {
         <div v-show="recalledImageId !== null && isGenSettingsExpanded" class="m-3">
           <span>Recalled image ID: {{recalledImageId}}</span>
           <img v-if="recalledImageId !== null" class="m-3 w-3/4 md:w-1/2 lg:w-1/6" :src="getLinkForJobId(recalledImageId)" alt="Recalled Image" />
-          <button @click="onClearRecallClick" class="m-3 btn btn-info">Clear Recall</button>
-          <button @click="onRecallVariationClick(0.3)" :disabled="isWorking" class="m-3 btn btn-accent">Vary (Weak)</button>
-          <button @click="onRecallVariationClick(0.7)" :disabled="isWorking" class="m-3 btn btn-accent">Vary (Strong)</button>
-          <button @click="onRecallUpscaleClick" :disabled="!isRecalledImageEligibleForUpscale || isWorking" class="m-3 btn btn-secondary">Upscale 2x</button>
+          <div class="grid grid-cols-2 gap-4 xl:w-1/4 mt-3">
+            <button @click="onClearRecallClick" class="btn btn-info">Clear Recall</button>
+            <button @click="onRecallVariationClick(0.3)" :disabled="isWorking" class="btn btn-accent">Vary (Weak)</button>
+            <button @click="onRecallVariationClick(0.7)" :disabled="isWorking" class="btn btn-accent">Vary (Strong)</button>
+            <button @click="onRecallUpscaleClick" :disabled="!isRecalledImageEligibleForUpscale || isWorking" class="btn btn-secondary">Upscale 2x</button>
+          </div>
         </div>
         <div v-show="recalledImageId === null && isGenSettingsExpanded" class="m-3">
           <span>You do not currently have an image recalled. Enter an Image ID below to recall:</span><br/>
