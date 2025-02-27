@@ -662,7 +662,7 @@ const recallJobParameters = (imageId, cb, shouldSetRecall = true, onRecallFail) 
     const subseed = params["Variation seed"];
     const subseedStrength = params["Variation seed strength"];
 
-    if(subseed) {
+    if(subseed !== null && subseed !== "") {
       imageParams.value.options.subseed = subseed;
       console.log("Subseed found", subseed);
       if(subseedStrength) {
