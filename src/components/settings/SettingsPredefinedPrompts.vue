@@ -1,8 +1,10 @@
 <script setup>
-import {computed, onMounted, ref, toRaw} from "vue";
+import {onMounted, ref, toRaw} from "vue";
 import {useSettingsStore} from "@/stores/settings";
+import {useAlertStore} from "@/stores/alerts";
 
 const settingsStore = useSettingsStore()
+const alertStore = useAlertStore()
 const predefinedPrompts = ref([])
 const isAddingPrompt = ref(false)
 const isImportingPrompt = ref(false)
@@ -30,24 +32,15 @@ onMounted(() => {
 })
 
 const pushErrorAlert = (message) => {
-  errorToast.value = message
-  setTimeout(() => {
-    errorToast.value = null
-  }, 5000)
+  alertStore.addAlert(message, "error")
 }
 
 const pushSuccessAlert = (message) => {
-  successToast.value = message
-  setTimeout(() => {
-    successToast.value = null
-  }, 5000)
+  alertStore.addAlert(message, "success")
 }
 
 const pushInfoAlert = (message) => {
-  infoToast.value = message
-  setTimeout(() => {
-    infoToast.value = null
-  }, 5000)
+  alertStore.addAlert(message, "info")
 }
 
 const addPrompt = () => {
