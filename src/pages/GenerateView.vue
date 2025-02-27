@@ -650,14 +650,10 @@ const recallJobParameters = (imageId, cb, shouldSetRecall = true, onRecallFail) 
     imageParams.value.options.sampler = availableSamplers.value.find((sampler) => sampler.name === params.Sampler);
     imageParams.value.options.scheduler = availableSchedulers.value.find((scheduler) => scheduler.label === params["Schedule type"])
     imageParams.value.options.steps = params["Steps"];
-    if(params["Hires resize-1"] !== 0 || params["Hires resize-2"] !== 0) {
-      imageParams.value.width = params["Hires resize-1"];
-      imageParams.value.height = params["Hires resize-2"];
-    } else {
-      let extractedSize = extractSizeFromInfo(resp.data.info);
-      imageParams.value.width = extractedSize.width;
-      imageParams.value.height = extractedSize.height;
-    }
+
+    let extractedSize = extractSizeFromInfo(resp.data.info);
+    imageParams.value.width = extractedSize.width;
+    imageParams.value.height = extractedSize.height;
 
     const subseed = params["Variation seed"];
     const subseedStrength = params["Variation seed strength"];
