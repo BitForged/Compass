@@ -561,16 +561,16 @@ const extractSizeFromInfo = (infoText) => {
   }
 }
 
-const recallLastJob = (cb) => {
+const recallLastJob = (cb, shouldSetRecalled = true) => {
   if(!lastJob.value) {
     console.error("No last job to recall");
     useAlertStore().addAlert("No last job to recall, please generate an image first!", "error");
     return;
   }
   if(cb) {
-    recallJobParameters(lastJob.value.job_id, cb);
+    recallJobParameters(lastJob.value.job_id, cb, shouldSetRecalled);
   } else {
-    recallJobParameters(lastJob.value.job_id);
+    recallJobParameters(lastJob.value.job_id, undefined, shouldSetRecalled);
   }
 }
 
@@ -595,40 +595,27 @@ const onVariationClick = (variation) => {
     setTimeout(() => {
       sendJobToNavigator(); // If this fails, it will reset the `isWorking` state
     }, 500);
-  })
+  }, false)
 }
 
 const onUpscaleClick = () => {
   console.log("Upscaling image");
   isWorking.value = true;
-  recallLastJob(() => {
-    sendUpscaleJobToNavigator(lastJob.value.job_id); // If this fails, it will reset the `isWorking` state
-    // After the user has upscaled the image, they probably don't want to re-generate the base image
-    // on the next run, so reset the seed to -1
-    imageParams.value.options.seed = -1;
-    imageParams.value.options.subseed = null;
-    imageParams.value.options.subseed_strength = null;
-  });
+  sendUpscaleJobToNavigator(lastJob.value.job_id); // If this fails, it will reset the `isWorking` state
+  // After the user has upscaled the image, they probably don't want to re-generate the base image
+  // on the next run, so reset the seed to -1
+  imageParams.value.options.seed = -1;
+  imageParams.value.options.subseed = null;
+  imageParams.value.options.subseed_strength = null;
 }
 
 const onRecallUpscaleClick = () => {
   console.log("Recalling and upscaling image");
   isWorking.value = true;
-  recallJobParameters(recalledImageId.value, () => {
-    const originalWidth = imageParams.value.width;
-    const originalHeight = imageParams.value.height;
-    const upscaledWidth = originalWidth * 2;
-    const upscaledHeight = originalHeight * 2;
-    if((upscaledWidth * upscaledHeight) > (2560 * 1440)) {
-      useAlertStore().addAlert("Upscaled image exceeds maximum resolution, so this image is unfortunately not eligible for upscaling.", "error");
-      console.error("Image is not eligible for upscaling!");
-      return;
-    }
-    sendUpscaleJobToNavigator(recalledImageId.value); // If this fails, it will reset the `isWorking` state
-    imageParams.value.options.seed = -1;
-    imageParams.value.options.subseed = null;
-    imageParams.value.options.subseed_strength = null;
-  });
+  sendUpscaleJobToNavigator(recalledImageId.value); // If this fails, it will reset the `isWorking` state
+  imageParams.value.options.seed = -1;
+  imageParams.value.options.subseed = null;
+  imageParams.value.options.subseed_strength = null;
 }
 
 const onRecallVariationClick = (variation) => {
@@ -640,7 +627,7 @@ const onRecallVariationClick = (variation) => {
     setTimeout(() => {
       sendJobToNavigator();
     }, 500);
-  });
+  }, false);
 }
 
 const recallJobParameters = (imageId, cb, shouldSetRecall = true, onRecallFail) => {
