@@ -62,3 +62,7 @@ export function setCategory(imageId, categoryId) {
 export function getMetadataForImage(imageId) {
     return request({endpoint: `api/user/image/${imageId}/meta`});
 }
+
+export function getAvailableLoras() {
+    return request({endpoint: "api/models/loras"});
+}

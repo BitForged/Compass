@@ -10,12 +10,13 @@ import {
   interruptJob, upscaleImageWithHR
 } from "@/services/NavigatorService";
 import {useAlertStore} from "@/stores/alerts";
-import SizePreviewBox from "@/components/SizePreviewBox.vue";
+import SizePreviewBox from "@/components/generate/SizePreviewBox.vue";
 import {useRouter} from "vue-router";
 import {saveAs} from "file-saver";
 import {deleteImage} from "@/services/UserService";
 import CategorySelect from "@/components/CategorySelect.vue";
 import {useSettingsStore} from "@/stores/settings";
+import LoraSelector from "@/components/generate/LoraSelector.vue";
 
 const router = useRouter();
 
@@ -83,6 +84,9 @@ const isImg2Img = computed(() => {
 });
 
 const inpaintingCanvas = ref(null);
+
+const loraPromptAddition = ref("")
+const isShowingLoraAdditions = ref(false)
 
 const progressClasses = computed(() => {
   if(isModelChanging.value) {
@@ -260,7 +264,7 @@ const sendJobToNavigator = () => {
     console.log("Sending job to Navigator", imageParams.value);
     isWorking.value = true;
     let job = {
-      prompt: imageParams.value.options.prompt,
+      prompt: `${imageParams.value.options.prompt} ${loraPromptAddition.value}`,
       negative_prompt: imageParams.value.options.negative_prompt,
       model_name: imageParams.value.options.model.model_name,
       sampler_name: imageParams.value.options.sampler.name,
@@ -945,6 +949,37 @@ const setStartingInput = (event) => {
   reader.readAsDataURL(event.target.files[0]);
 };
 
+const onLoraWordClicked = (word, isMutatingNegativePrompt) => {
+  // Ensure we're working with the most up-to-date prompt and split into phrases
+  const startingPrompt = isMutatingNegativePrompt ? imageParams.value.options.negative_prompt : imageParams.value.options.prompt;
+  const currentWords = startingPrompt
+      .split(',')
+      .map((w) => w.trim()) // Remove leading/trailing whitespace
+      .filter((w) => w.length > 0); // Filter out any empty entries from the split
+
+  // Check if the clicked word/phrase already exists in the prompt
+  const wordIndex = currentWords.findIndex((existingWord) => existingWord === word);
+
+  if (wordIndex === -1) {
+    // Word doesn't exist, so add it
+    currentWords.push(word);
+  } else {
+    // Word exists, so remove it
+    currentWords.splice(wordIndex, 1);
+  }
+
+  // Join the updated list back into a single comma-separated string
+  if(!isMutatingNegativePrompt) {
+    imageParams.value.options.prompt = currentWords.join(', ');
+  } else {
+    imageParams.value.options.negative_prompt = currentWords.join(', ');
+  }
+}
+
+const onLoraUpdate = (promptStr) => {
+  loraPromptAddition.value = promptStr;
+}
+
 onMounted(async () => {
   toggleBodyScroll(showTipsModal.value);
   await initializeData();
@@ -1007,6 +1042,9 @@ onUnmounted(() => {
           <textarea :disabled="recalledImageId !== null" v-model="imageParams.options.negative_prompt" class="textarea h-24 textarea-bordered m-3" placeholder="Optionally, enter a negative prompt - which describes what you don't want to see in the image."></textarea>
           <span v-if="imageParams.options.seed !== -1" class="m-3 mt-1 text-sm text-accent">Note: You have a seed set, visit "Generation Settings" => Advanced Options to change/randomize this.</span>
           <span v-if="recalledImageId !== null" class="m-3 mt-1 text-sm text-error">Warning: You have a recalled image active, the prompt and other settings cannot be changed as changing the settings would cause variations to be invalid. Clear the recalled image in "Generation Settings" to unlock editing of these.</span>
+          <LoraSelector :disabled="recalledImageId !== null" :prompt="imageParams.options.prompt" :negative-prompt="imageParams.options.negative_prompt" @onWordClicked="onLoraWordClicked" @loraUpdated="onLoraUpdate" class="m-2" />
+          <p v-if="loraPromptAddition.length > 0 && isShowingLoraAdditions" class="text-sm italic text-gray-500 m-2" @click="isShowingLoraAdditions = !isShowingLoraAdditions">The following will automatically be appended to your prompt due to your LoRA choices: {{loraPromptAddition}}</p>
+          <p v-else-if="!isShowingLoraAdditions && loraPromptAddition.length > 0" class="text-sm italic text-gray-500 m-2" @click="isShowingLoraAdditions = !isShowingLoraAdditions">LoRA text will automatically be appended to your prompt, click to show</p>
         </div>
       </div>
       <div class="generate-button-container col-span-12 md:col-span-3 pt-0 m-3 md:pt-10">
