@@ -1,5 +1,5 @@
 <script setup>
-import {computed, inject, onMounted, onUnmounted, ref, toRaw, watch} from "vue";
+import {computed, inject, nextTick, onMounted, onUnmounted, ref, toRaw, watch} from "vue";
 import { OhVueIcon } from "oh-vue-icons";
 import {
   generateImg2Img,
@@ -53,7 +53,7 @@ const isConnectedToRt = ref(false);
 
 const recalledImageId = ref(null);
 
-const recallTextEntry = ref(null);
+const recallTextEntry = ref("");
 
 const recallEntryFailed = ref(false);
 
@@ -87,6 +87,8 @@ const inpaintingCanvas = ref(null);
 
 const loraPromptAddition = ref("")
 const isShowingLoraAdditions = ref(false)
+const loraSelector = ref(null)
+const lorasResolved = ref(false)
 
 const progressClasses = computed(() => {
   if(isModelChanging.value) {
@@ -703,6 +705,10 @@ const recallJobParameters = (imageId, cb, shouldSetRecall = true, onRecallFail) 
     if(cb) {
       cb();
     }
+
+    // Force propagate the prompt downward to LoRA related components so that they can be re-activated/reset
+    //  (The LoRA activation syntax (should) always be in the positive prompt)
+    loraSelector.value.forceActivateLoraFromPrompt(imageParams.value.options.prompt);
   }).catch((error) => {
     console.error("Failed to recall job parameters", error);
     useAlertStore().addAlert("Failed to recall job parameters, please try again later!", "error");
@@ -976,8 +982,56 @@ const onLoraWordClicked = (word, isMutatingNegativePrompt) => {
   }
 }
 
-const onLoraUpdate = (promptStr) => {
-  loraPromptAddition.value = promptStr;
+/**
+ * This function takes care of two jobs effectively. It needs to receive new LoRA activation sequences and store the
+ *  sequence (comes in as a single string of concatenated sequences) so that they can be appended to the prompt before
+ *  sending the generation request.
+ * It *also* needs to scan for these if they are in the prompt already and remove them as they will be in the prompt
+ *    when an image is recalled (because the activation sequences will be in the image's prompt metadata).
+ * Because prompts can come in quite a few different structures (they are user created after all), we have to really
+ *  break down the entire prompt into minimal "tokens", search for the activation sequence(s) if found, remove it, then
+ *  reassemble the prompt back to what the user will likely have entered.
+ * All in all, it is a needed feature (otherwise recalled images will silently have duplicated activation sequences)
+ *  but one that was VERY complex to write. Who would've thought?
+ * @param loraSequences A single string of LoRA activation sequences passed in from the LoRA Selector component
+ */
+const onLoraUpdate = (loraSequences) => {
+  loraPromptAddition.value = loraSequences;
+  nextTick(() => {
+    let currentPrompt = imageParams.value.options.prompt;
+
+    // 1. Split the promptStr into individual LoRA entries
+    const loraEntries = loraSequences.split(' ');
+
+    // 2. Process each LoRA entry and remove it from the prompt
+    loraEntries.forEach((loraEntry) => {
+      // 3. Split the prompt into an array of phrases
+      const phrases = currentPrompt.split(',');
+
+      // 4. Process each phrase and remove the LoRA entry if found
+      const filteredPhrases = phrases.map((phrase) => {
+        const trimmedPhrase = phrase.trim();
+        const words = trimmedPhrase.split(' ');
+
+        // Filter out the LoRA entry from the words
+        const filteredWords = words.filter((word) => word.trim() !== loraEntry.trim());
+
+        // Join the remaining words back into a phrase
+        return filteredWords.join(' ');
+      });
+
+      // 5. Filter out any empty phrases that might have resulted from removing the LoRA entry
+      const finalPhrases = filteredPhrases.filter((phrase) => phrase.trim() !== "");
+
+      // 6. Join the filtered phrases back into a string
+      currentPrompt = finalPhrases.join(', ');
+    });
+
+    // 7. Update the prompt
+    imageParams.value.options.prompt = currentPrompt;
+
+    console.log("Filtered prompt:", imageParams.value.options.prompt);
+  });
 }
 
 onMounted(async () => {
@@ -1027,8 +1081,10 @@ onUnmounted(() => {
     <div class="grid grid-cols-12 gap-4">
       <div class="prompt-container col-span-12 md:col-span-9">
         <div class="form-control border border-opacity-50 border-gray-500 cornered">
-          <span class="label justify-normal ms-2 flex items-center">Prompting
+          <span class="label justify-normal ms-2">Prompting
             <oh-vue-icon @click="showTipsModal = true" name="hi-information-circle" class="ml-2"/>
+            <span v-if="!lorasResolved" class="italic text-sm text-neutral-500 align-middle">&nbsp; Resolving LoRAs... <span class="loading loading-dots align-middle"></span></span>
+            <span v-if="isWorking" class="italic text-sm text-neutral-500 align-middle">&nbsp; Generating... <span class="loading loading-dots align-middle"></span></span>
           </span>
           <span v-if="isImg2Img" class="m-3 text-sm text-warning">When using Img2Img, you should try to use a prompt that describes the original image (preferably the original!), while incorporating the changes you wish to see.</span>
           <span v-if="getPredefinedPrompts.length > 0" class="m-4 text-sm italic">To apply a predefined prompt, choose one below:</span>
@@ -1042,7 +1098,7 @@ onUnmounted(() => {
           <textarea :disabled="recalledImageId !== null" v-model="imageParams.options.negative_prompt" class="textarea h-24 textarea-bordered m-3" placeholder="Optionally, enter a negative prompt - which describes what you don't want to see in the image."></textarea>
           <span v-if="imageParams.options.seed !== -1" class="m-3 mt-1 text-sm text-accent">Note: You have a seed set, visit "Generation Settings" => Advanced Options to change/randomize this.</span>
           <span v-if="recalledImageId !== null" class="m-3 mt-1 text-sm text-error">Warning: You have a recalled image active, the prompt and other settings cannot be changed as changing the settings would cause variations to be invalid. Clear the recalled image in "Generation Settings" to unlock editing of these.</span>
-          <LoraSelector :disabled="recalledImageId !== null" :prompt="imageParams.options.prompt" :negative-prompt="imageParams.options.negative_prompt" @onWordClicked="onLoraWordClicked" @loraUpdated="onLoraUpdate" class="m-2" />
+          <LoraSelector ref="loraSelector" :disabled="recalledImageId !== null || isWorking" :prompt="imageParams.options.prompt" :negative-prompt="imageParams.options.negative_prompt" @lorasResolved="lorasResolved = true" @onWordClicked="onLoraWordClicked" @loraUpdated="onLoraUpdate" class="m-2" />
           <p v-if="loraPromptAddition.length > 0 && isShowingLoraAdditions" class="text-sm italic text-gray-500 m-2" @click="isShowingLoraAdditions = !isShowingLoraAdditions">The following will automatically be appended to your prompt due to your LoRA choices: {{loraPromptAddition}}</p>
           <p v-else-if="!isShowingLoraAdditions && loraPromptAddition.length > 0" class="text-sm italic text-gray-500 m-2" @click="isShowingLoraAdditions = !isShowingLoraAdditions">LoRA text will automatically be appended to your prompt, click to show</p>
         </div>
