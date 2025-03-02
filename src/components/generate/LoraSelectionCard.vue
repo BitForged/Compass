@@ -76,6 +76,8 @@ onMounted(() => {
       </p>
     </div>
     <input type="range" class="range range-sm range-primary" id="strength" step="0.1" min="0.0" max="1.0" :value="strength" @change="strength = $event.target.value; emit('strengthChanged', strength)"/>
+    <span v-if="lora.civitai !== undefined && lora.civitai.baseModel !== undefined" class="text-sm italic badge badge-accent">{{lora.civitai.baseModel}}</span>
+    <span v-else class="text-sm italic badge badge-error">Unknown Model Type</span>
     <input :disabled="disabled" type="range" class="range range-sm" :class="{'range-primary': !disabled, 'range-test': disabled}" id="strength" step="0.1" min="0.0" max="1.0" :value="strength" @change="strength = $event.target.value; emit('strengthChanged', strength)"/>
     <p class="text-sm">{{strength}}</p>
     <div class="card-actions h-fit">
