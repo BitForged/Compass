@@ -1105,7 +1105,7 @@ onUnmounted(() => {
         <div v-show="recalledImageId === null && isGenSettingsExpanded" class="m-3">
           <span>You do not currently have an image recalled. Enter an Image ID below to recall:</span><br/>
           <input v-model="recallTextEntry" type="text" class="mt-4 input input-md input-primary"/>
-          <button :disabled="isWorking" class="ml-1 mb-2 btn btn-primary" @click="onRecallClick">Recall</button><br/>
+          <button :disabled="isWorking || !recallTextEntry" class="ml-1 mb-2 btn btn-primary" @click="onRecallClick">Recall</button><br/>
           <span v-if="recallEntryFailed" class="text-sm text-error">The specified Image ID could not be recalled. The image may not exist, or Navigator encountered an issue attempting to check the metadata.</span>
           <span v-if="!recallEntryFailed" class="text-sm text-gray-500 italic">Note: Upon a successful recall, any current generation parameters will be overwritten.</span>
         </div>

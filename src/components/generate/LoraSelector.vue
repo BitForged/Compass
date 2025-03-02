@@ -87,7 +87,7 @@ const getLoraPromptString = () => {
       </div>
       <div class="grid grid-cols-12 gap-4 w-full mt-3">
         <LoraSelectionCard class="col-span-12 xl:col-span-6" :class="{'md:col-span-6': enabledLoras.length > 1}" v-for="lora in enabledLoras" :key="lora.alias" :lora="lora"
-                           :split-training-words="splitTrainingWords" :prompt="prompt" :negative-prompt="negativePrompt"
+                           :split-training-words="splitTrainingWords" :prompt="prompt" :negative-prompt="negativePrompt" :strength="lora.strength" :disabled="disabled"
                            @removed="onLoraRemoved(lora.alias)" @onWordClicked="onWordClicked" @strengthChanged="onLoraStrengthChanged(lora.alias, $event)"/>
       </div>
       <div class="w-full mt-3 flex items-center">
