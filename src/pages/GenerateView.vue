@@ -1034,6 +1034,29 @@ const onLoraUpdate = (loraSequences) => {
   });
 }
 
+const deviceResolution = computed(() => {
+  return { width: (window.devicePixelRatio * window.screen.width) / 2, height: (window.devicePixelRatio * window.screen.height) / 2 };
+})
+
+const isUsingDeviceResolution = computed(() => {
+  // Return true if the current target width/height is already 2x of the deviceResolution
+  if(imageParams.value.width === deviceResolution.value.width * 2 && imageParams.value.height === deviceResolution.value.height * 2) {
+    return true;
+  }
+  // Return "true" if the full resolution (so x2 of `deviceResolution`) is over the Pixel limit, so that the label is hidden
+  if((deviceResolution.value.width * 2) * (deviceResolution.value.height * 2) > 2560 * 1440) {
+    return true;
+  }
+  return deviceResolution.value.width === imageParams.value.width && deviceResolution.value.height === imageParams.value.height;
+})
+
+const applyScreenResolution = () => {
+  // Apply half the resolution of the current device
+  // We don't use the entire resolution since they can just upscale x2
+  imageParams.value.width = deviceResolution.value.width;
+  imageParams.value.height = deviceResolution.value.height;
+}
+
 onMounted(async () => {
   toggleBodyScroll(showTipsModal.value);
   await initializeData();
@@ -1185,6 +1208,8 @@ onUnmounted(() => {
               <input disabled v-model="imageParams.height" type="range" :class="rangeColorClasses" class="col-span-8 md:col-span-10 range" min="64" max="4096" />
               <input :disabled="recalledImageId !== null" v-model="imageParams.height" type="number" class="col-span-4 md:col-span-2 md:w-3/4 input input-primary" @blur="validateImageSizeParams" />
             </div>
+            <span v-if="!isUsingDeviceResolution && !doesSizeExceedLimit && !isImg2Img" class="text-sm text-success cursor-pointer mt-3" @click="applyScreenResolution">Looking to make a wallpaper? Click here to apply half of your device's screen resolution.</span>
+            <span v-if="!isUsingDeviceResolution && !doesSizeExceedLimit && !isImg2Img" class="text-sm text-success cursor-pointer mt-3 mb-3" @click="applyScreenResolution">(It can then be upscaled to the full resolution)</span>
             <span v-if="doesSizeRequireUpscale && !doesSizeExceedLimit"><em>Note: Due to the chosen size, your image will generate at half-resolution and will be upscaled to the full resolution.</em></span>
             <span class="text-error" v-if="doesSizeExceedLimit"><em>Error: The chosen size exceeds the maximum size, please choose a lower resolution.</em></span>
           </div>
