@@ -335,7 +335,7 @@ const sendJobToNavigator = () => {
         progressText.value = "Job queued, waiting to be picked up by Navigator...";
         lastJob.value = { ... job, status: 'queued', job_id: resp.data.job_id };
         isGenSettingsExpanded.value = false;
-        // TODO: Handle queue status
+        loraSelector.value.forceCollapse();
       }).catch((error) => {
         console.error("from", error);
         useAlertStore().addAlert("Failed to send image generation request to Navigator, please try again later!", "error");
@@ -362,6 +362,7 @@ const sendJobToNavigator = () => {
         progressText.value = "Job queued, waiting to be picked up by Navigator...";
         lastJob.value = { ... job, status: 'queued', job_id: resp.data.job_id };
         isGenSettingsExpanded.value = false;
+        loraSelector.value.forceCollapse();
       }).catch((error) => {
         console.error("from", error);
         useAlertStore().addAlert("Failed to send image generation request to Navigator, please try again later!", "error");
@@ -398,6 +399,7 @@ const sendUpscaleJobToNavigator = (jobId) => {
     progressText.value = "Job queued, waiting to be picked up by Navigator...";
     lastJob.value = { status: 'queued', job_id: resp.data.job_id};
     isGenSettingsExpanded.value = false;
+    loraSelector.value.forceCollapse();
   }).catch((error) => {
     console.error("Failed to send upscale request to Navigator", error);
     useAlertStore().addAlert("Failed to send upscale request to Navigator, please try again later!", "error");

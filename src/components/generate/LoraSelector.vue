@@ -127,8 +127,13 @@ const forceActivateLoraFromPrompt = async (prompt) => {
   console.log("Finished scanning prompt for loras from prompt -> ", prompt)
 }
 
+const forceCollapse = () => {
+  isExpanded.value = false
+}
+
 defineExpose({
-  forceActivateLoraFromPrompt
+  forceActivateLoraFromPrompt,
+  forceCollapse
 })
 </script>
 
