@@ -1049,7 +1049,7 @@ const onLoraUpdate = (loraSequences) => {
 }
 
 const deviceResolution = computed(() => {
-  return { width: (window.devicePixelRatio * window.screen.width) / 2, height: (window.devicePixelRatio * window.screen.height) / 2 };
+  return { width: Math.floor((window.devicePixelRatio * window.screen.width) / 2), height: Math.floor((window.devicePixelRatio * window.screen.height) / 2) };
 })
 
 const isUsingDeviceResolution = computed(() => {
