@@ -66,3 +66,7 @@ export function getMetadataForImage(imageId) {
 export function getAvailableLoras() {
     return request({endpoint: "api/models/loras"});
 }
+
+export function getLimits() {
+    return request({endpoint: "api/config/limits"});
+}

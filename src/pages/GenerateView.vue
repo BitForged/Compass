@@ -6,7 +6,7 @@ import {
   generateTxt2Img,
   getAvailableModels,
   getAvailableSamplers, getAvailableSchedulers,
-  getImageInfo, getMetadataForImage, getMyCategories,
+  getImageInfo, getLimits, getMetadataForImage, getMyCategories,
   interruptJob, upscaleImageWithHR
 } from "@/services/NavigatorService";
 import {useAlertStore} from "@/stores/alerts";
@@ -113,6 +113,8 @@ const availableModels = ref([]);
 const availableSamplers = ref([]);
 const availableSchedulers = ref([]);
 
+const navigatorLimits = ref({})
+
 const selectedPredefinedPrompt = ref({});
 
 const navigatorRt = inject("$navigator_rt");
@@ -122,7 +124,7 @@ const doesSizeRequireUpscale = computed(() => {
 });
 
 const doesSizeExceedLimit = computed(() => {
-  return (imageParams.value.width * imageParams.value.height) > (2560 * 1440);
+  return (imageParams.value.width * imageParams.value.height) > navigatorLimits.value.max_pixels;
 });
 
 const isImageParamsValid = computed(() => {
@@ -158,7 +160,7 @@ const isEligibleForUpscale = computed(() => {
   if(!lastJob.value) return false;
   const upscaledWidth = lastJob.value.width * 2;
   const upscaledHeight = lastJob.value.height * 2;
-  return (upscaledWidth * upscaledHeight) <= (2560 * 1440);
+  return (upscaledWidth * upscaledHeight) <= navigatorLimits.value.max_pixels;
 });
 
 const getLinkForJobId = (jobId) => {
@@ -252,6 +254,18 @@ const initializeData = async () => {
       imageParams.value.options.scheduler = resp.data[0];
     }
   })
+
+  try {
+    let limitsResp = await getLimits()
+    navigatorLimits.value = limitsResp.data;
+    console.log("Fetched limits from Navigator", limitsResp.data);
+  } catch (e) {
+      console.error("Failed to fetch limits from Navigator", e);
+      // Fall back to default values
+      navigatorLimits.value = {
+        max_pixels: 3686400
+      }
+  }
 
   await retrieveCategories();
   console.log("Done loading initial data");
@@ -678,10 +692,10 @@ const recallJobParameters = (imageId, cb, shouldSetRecall = true, onRecallFail) 
 
     // Check if the image is eligible for upscaling, so that the user can choose to upscale it if desired
     // To be eligible,
-    // the targeted upscaled image must be less than or equal to 2560x1440
+    // the targeted upscaled image must be less than or equal to `navigatorLimits.max_pixels`
     const upscaledWidth = imageParams.value.width * 2;
     const upscaledHeight = imageParams.value.height * 2;
-    isRecalledImageEligibleForUpscale.value = upscaledWidth * upscaledHeight <= (2560 * 1440);
+    isRecalledImageEligibleForUpscale.value = upscaledWidth * upscaledHeight <= navigatorLimits.value.max_pixels;
 
     imageParams.value.options.cfg_scale = params["CFG scale"];
     imageParams.value.options.seed = params.Seed;
@@ -930,9 +944,9 @@ const setStartingInput = (event) => {
       let img = new Image();
       img.src = e.target.result;
       img.onload = () => {
-        if(img.width * img.height > (2560 * 1440)) {
+        if(img.width * img.height > navigatorLimits.value.max_pixels) {
           console.error("Image exceeds maximum resolution", img.width, img.height);
-          useAlertStore().addAlert("This image exceeds the maximum resolution of 2560x1440, please use a smaller image!", "error");
+          useAlertStore().addAlert(`This image exceeds the maximum pixel count of ${navigatorLimits.value.max_pixels}, please use a smaller image!`, "error");
           return;
         }
         console.log("Image dimensions", img.width, img.height);
@@ -1044,7 +1058,7 @@ const isUsingDeviceResolution = computed(() => {
     return true;
   }
   // Return "true" if the full resolution (so x2 of `deviceResolution`) is over the Pixel limit, so that the label is hidden
-  if((deviceResolution.value.width * 2) * (deviceResolution.value.height * 2) > 2560 * 1440) {
+  if((deviceResolution.value.width * 2) * (deviceResolution.value.height * 2) > navigatorLimits.value.max_pixels) {
     return true;
   }
   return deviceResolution.value.width === imageParams.value.width && deviceResolution.value.height === imageParams.value.height;
