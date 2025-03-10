@@ -154,12 +154,10 @@ const onImageLoaded = (element) => {
   // We receive an HTMLImageElement from the event, which we can use to get the image's natural dimensions
   let width = element.naturalWidth;
   let height = element.naturalHeight;
-  console.log(`Image loaded with dimensions: ${element.naturalWidth}x${element.naturalHeight}`);
   // Find the job ID from the image's src attribute, which is the last part of the URL
   const jobId = element.src.split("/").pop();
-  console.log(`Image loaded for job ${jobId}`);
   if(width * height > (1024 * 1024)) {
-    console.log(`Image for job ${jobId} is high resolution`);
+    console.debug(`Image for job ${jobId} is high resolution`);
     const job = jobs.value.find(j => j.id === jobId);
     if(job) {
       job.isHighRes = true;
@@ -167,7 +165,7 @@ const onImageLoaded = (element) => {
   }
 };
 
-const forceRecaluclateIsJobHighRes = (jobId) => {
+const forceRecalculateIsJobHires = (jobId) => {
   const element = document.getElementById(jobId);
   if(!element) {
     return;
@@ -209,7 +207,7 @@ const fetchPage = async (page) => {
   paginationData.value.totalItems = retrievedJobs.data.count;
 
   for (let job of jobs.value) {
-    forceRecaluclateIsJobHighRes(job.id);
+    forceRecalculateIsJobHires(job.id);
   }
 }
 
@@ -289,7 +287,7 @@ onMounted(async () => {
             <div v-if="job.isHighRes === true" class="corner-icon">
             </div>
           </div>
-          <div class="card-actions grid grid-cols-2 md:grid-cols-2 xl:grid-cols-4 gap-2 mt-2">
+          <div class="card-actions grid grid-cols-2 3xl:grid-cols-3 gap-2 mt-2">
             <button @click="onCategoryUpdate(job.id)" class="btn btn-accent">Categorize</button>
             <RouterLink :to="{ name: 'img2img', query: { input: job.id}}" class="btn btn-primary">Img2Img</RouterLink>
             <RouterLink :to="{ name: 'txt2img', query: { recall: job.id}}" class="btn btn-info">Recall</RouterLink>
