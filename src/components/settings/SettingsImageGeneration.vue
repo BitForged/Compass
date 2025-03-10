@@ -18,6 +18,10 @@ const upscaleSettings = ref({
 
 const upscalerOptions = ref([])
 
+const generalSettings = ref({
+  shareToCivitAI: false,
+})
+
 watch(() => upscaleSettings.value.steps, (value, oldValue) => {
   if(value !== oldValue) {
     console.debug("Upscale steps changed:", value)
@@ -45,6 +49,11 @@ watch(() => upscaleSettings.value.upscaler, (value, oldValue) => {
       settings.setSetting("upscaler", value)
     }
   }
+})
+
+watch(() => generalSettings.value.shareToCivitAI, (value) => {
+  settings.setSetting("shareToCivitAI", value)
+  console.debug("Share to CivitAI changed:", value)
 })
 
 watch(() => explainUpscaleSteps.value, (value) => {
@@ -82,6 +91,7 @@ onMounted(() => {
   // Initialize settings
   upscaleSettings.value.steps = settings.getSetting("upscaleSteps") || -1
   upscaleSettings.value.denoisingStrength = settings.getSetting("upscaleDenoisingStrength") || -1
+  generalSettings.value.shareToCivitAI = settings.getSetting("shareToCivitAI") || false
 
   // Populate upscaler options
   getAvailableUpscalers().then(upscalers => {
@@ -171,6 +181,27 @@ onMounted(() => {
         <div v-if="upscaleSettings.upscaler !== 'DEFAULT' && currentUpscaler !== undefined" class="form-control row-auto">
           <span class="text-success">This upscaler is great for upscaling up to x{{currentUpscaler.scale}}!</span>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="heading">
+      General Settings
+    </div>
+    <div class="settings lg:grid lg:grid-cols-3 gap-2">
+      <div class="setting">
+        <div class="setting-title">
+          Share to CivitAI Button
+        </div>
+        <label class="label w-fit">
+          <input @click="generalSettings.shareToCivitAI = false" type="radio" class="radio radio-primary" id="add-share-to-civitai" name="add-share-to-civitai" value="false" :checked="generalSettings.shareToCivitAI === false" />
+          <span class="label-text ms-2 float-start">Disabled</span>
+        </label>
+        <label class="label w-fit">
+          <input @click="generalSettings.shareToCivitAI = true" type="radio" class="radio radio-primary" id="add-share-to-civitai" name="add-share-to-civitai" value="true" :checked="generalSettings.shareToCivitAI" />
+          <span class="label-text ms-2 float-start">Enabled</span>
+        </label>
       </div>
     </div>
   </div>

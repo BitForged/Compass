@@ -3,11 +3,14 @@ import {deleteImage, getMyJobs} from "@/services/UserService";
 import {computed, onMounted, ref} from "vue";
 import {useAlertStore} from "@/stores/alerts";
 import VLazyImage from "v-lazy-image";
+import {OhVueIcon} from "oh-vue-icons";
 import CategorySelect from "@/components/CategorySelect.vue";
 import {getMyCategories, setCategory} from "@/services/NavigatorService";
 import {useRouter} from "vue-router";
+import {useSettingsStore} from "@/stores/settings";
 
 const router = useRouter();
+const settings = useSettingsStore();
 
 const jobs = ref([]);
 const selectedCategoryId = ref(null);
@@ -17,6 +20,8 @@ const pendingDeleteId = ref("");
 const pendingDeleteTimeoutId = ref(null);
 
 const updatingCategoryForJob = ref(null);
+
+const isShareToCivitAIEnabled = ref(false);
 
 const paginationData = ref({
   page: 1,
@@ -215,7 +220,16 @@ const isPageHighlighted = (page) => {
   return paginationData.value.page === page;
 };
 
+const shareToCivitAI = (jobId) => {
+  const imgUrl = `${import.meta.env.VITE_API_BASE}${jobId}`
+  console.log("Sharing to CivitAI: ", imgUrl);
+
+  const civitAILink = `https://civitai.com/intent/post?mediaUrl=${encodeURIComponent(imgUrl)}`;
+  window.open(civitAILink, '_blank');
+}
+
 onMounted(async () => {
+  isShareToCivitAIEnabled.value = settings.getSetting("shareToCivitAI");
   try {
     // Fetch initial data (jobs & categories)
     const retrievedJobs = await getMyJobs();
@@ -289,10 +303,11 @@ onMounted(async () => {
           </div>
           <div class="card-actions grid grid-cols-2 3xl:grid-cols-3 gap-2 mt-2">
             <button @click="onCategoryUpdate(job.id)" class="btn btn-accent">Categorize</button>
-            <RouterLink :to="{ name: 'img2img', query: { input: job.id}}" class="btn btn-primary">Img2Img</RouterLink>
-            <RouterLink :to="{ name: 'txt2img', query: { recall: job.id}}" class="btn btn-info">Recall</RouterLink>
+            <RouterLink :to="{ name: 'img2img', query: { input: job.id}}" class="btn btn-info">Img2Img</RouterLink>
+            <RouterLink :to="{ name: 'txt2img', query: { recall: job.id}}" class="btn btn-success">Recall</RouterLink>
             <button v-if="!isPendingDelete(job)" @click="setPendingDelete(job)" class="btn btn-warning">Delete?</button>
             <button v-else @click="onDeleteClick(job)" class="btn btn-error btn-delete">Confirm!</button>
+            <button v-if="isShareToCivitAIEnabled" @click="shareToCivitAI(job.id)" class="btn btn-primary"><oh-vue-icon name="ri-share-box-fill"/>CivitAI</button>
           </div>
           <div class="card-footer">
             <CategorySelect v-if="updatingCategoryForJob === job.id" @onCategorySelected="onCategoryUpdateConfirmed" show-remove-option="true" />

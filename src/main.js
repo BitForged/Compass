@@ -17,7 +17,8 @@ import {
     FaCheck,
     FaTimes,
     MdFibernew,
-    MdAutofixhigh
+    MdAutofixhigh,
+    RiShareBoxFill
 } from "oh-vue-icons/icons";
 import './style.css'
 import App from './App.vue'
@@ -28,7 +29,7 @@ import {registerSW} from "virtual:pwa-register";
 const pinia = createPinia();
 addIcons(HiInformationCircle, BiArrowDownUp, FaAngleDoubleUp, FaDownload, MdReplaycirclefilled, MdDeleteforever,
     HiClipboardCopy, GiPerspectiveDiceSixFacesRandom, CoSpeech, MdCategory, FaEdit, FaQuestion, FaCheck, FaTimes,
-    MdFibernew, MdAutofixhigh);
+    MdFibernew, MdAutofixhigh, RiShareBoxFill);
 
 pinia.use(({ store }) => {
     store.$router = markRaw(router);

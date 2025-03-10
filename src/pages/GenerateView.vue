@@ -971,6 +971,14 @@ const setStartingInput = (event) => {
   reader.readAsDataURL(event.target.files[0]);
 };
 
+const shareToCivitAI = () => {
+  const imgUrl = `${import.meta.env.VITE_API_BASE}${lastJob.value.img_path}`
+  console.log("Sharing to CivitAI: ", imgUrl);
+
+  const civitAILink = `https://civitai.com/intent/post?mediaUrl=${encodeURIComponent(imgUrl)}`;
+  window.open(civitAILink, '_blank');
+}
+
 const onLoraWordClicked = (word, isMutatingNegativePrompt) => {
   // Ensure we're working with the most up-to-date prompt and split into phrases
   const startingPrompt = isMutatingNegativePrompt ? imageParams.value.options.negative_prompt : imageParams.value.options.prompt;
@@ -1329,6 +1337,7 @@ onUnmounted(() => {
             <button v-if="!isDeletePending" :disabled="!lastJob || lastJob.status !== 'completed'" @click="onDeleteClick" class="btn btn-error w-full mt-2 relative"><oh-vue-icon class="size-7" name="md-deleteforever"/>&nbsp; Delete Image</button>
             <button v-else :disabled="!lastJob || lastJob.status !== 'completed'" @click="onDeleteClick" class="btn btn-error w-full mt-2 relative"><oh-vue-icon class="size-7" name="md-deleteforever"/><strong>&nbsp;Click To Confirm</strong></button>
 <!--            <button v-if="!isImg2Img" :disabled="!lastJob || lastJob.status !== 'completed'" @click="recallLastJob" class="btn btn-primary w-full mt-2 relative"><oh-vue-icon class="size-6" animation="spin" name="md-replaycirclefilled"/>&nbsp; Recall Parameters</button>-->
+            <button v-if="settings.getSetting('shareToCivitAI') === true" :disabled="!lastJob || lastJob.status !== 'completed'" @click="shareToCivitAI" class="btn btn-primary w-full mt-2 relative"><oh-vue-icon class="size-6" name="ri-share-box-fill"/>Share to CivitAI</button>
             <button v-if="!img2imgParams.inpainting" :disabled="!lastJob || lastJob.status !== 'completed'" @click="onVariationClick(0.3)" class="btn btn-accent w-full mt-2 relative"><oh-vue-icon class="size-6" animation="pulse" name="gi-perspective-dice-six-faces-random"/>&nbsp; Variation (Subtle)</button>
             <button v-if="!img2imgParams.inpainting" :disabled="!lastJob || lastJob.status !== 'completed'" @click="onVariationClick(0.7)" class="btn btn-accent w-full mt-2 relative"><oh-vue-icon class="size-6" animation="pulse" name="gi-perspective-dice-six-faces-random"/>&nbsp; Variation (Strong)</button>
             <button v-if="!isImg2Img" :disabled="!lastJob || lastJob.status !== 'completed' || !isEligibleForUpscale" @click="onUpscaleClick" class="btn btn-secondary w-full mt-2 relative"><oh-vue-icon class="size-6" animation="pulse" name="fa-angle-double-up"/>&nbsp;Recall & Upscale 2x</button>
