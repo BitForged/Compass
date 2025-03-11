@@ -38,13 +38,13 @@ const promptComingSoon = () => {
         </div>
         <!-- Mobile Navigation Dropdown Menu -->
         <ul tabindex="0" class="menu menu-sm dropdown-content bg-base-100 rounded-box z-[1] mt-3 w-52 p-2 shadow">
-          <li>
+          <li v-if="authStore.isLoggedIn()">
             <RouterLink to="/gallery" class="btn btn-ghost">Gallery</RouterLink>
           </li>
-          <li>
+          <li v-if="authStore.isLoggedIn()">
             <RouterLink :to="{name: 'txt2img'}" class="btn btn-ghost">Generate</RouterLink>
           </li>
-          <li>
+          <li v-if="authStore.isLoggedIn()">
             <RouterLink :to="{name: 'settings'}" class="btn btn-ghost">Settings</RouterLink>
           </li>
           <li>
@@ -56,7 +56,7 @@ const promptComingSoon = () => {
       <RouterLink to="/" class="btn btn-ghost text-xl">Compass</RouterLink>
     </div>
     <!-- Desktop Navigation menu -->
-    <div class="navbar-center hidden lg:flex">
+    <div v-if="authStore.isLoggedIn()" class="navbar-center hidden lg:flex">
       <ul class="menu menu-horizontal px-1">
         <li>
           <RouterLink to="/gallery" class="btn btn-ghost">Gallery</RouterLink>
