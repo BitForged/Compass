@@ -20,11 +20,9 @@ const promptComingSoon = () => {
 };
 
 onMounted(async () => {
-  let resp = await isDownloadAllowed()
-  if(resp.status === 200 && resp.data.downloadsEnabled === true) {
-    downloadsEnabled.value = true;
-  } else {
-    downloadsEnabled.value = false;
+  if(authStore.isLoggedIn()) {
+    let resp = await isDownloadAllowed()
+    downloadsEnabled.value = resp.status === 200 && resp.data.downloadsEnabled === true;
   }
 })
 </script>
