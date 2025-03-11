@@ -2,12 +2,14 @@
 import AuthButton from "@/components/AuthButton.vue";
 import { RouterLink } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
-import {computed} from "vue";
+import {computed, onMounted, ref} from "vue";
 import {useAlertStore} from "@/stores/alerts";
+import {isDownloadAllowed} from "@/services/NavigatorService";
 
 const authStore = useAuthStore();
 
 const isDev = import.meta.env.VITE_DEV || false;
+const downloadsEnabled = ref(false)
 
 const isDevMode = computed(() => {
   return isDev;
@@ -16,6 +18,15 @@ const isDevMode = computed(() => {
 const promptComingSoon = () => {
   useAlertStore().addAlert("This feature is coming soon!", "info");
 };
+
+onMounted(async () => {
+  let resp = await isDownloadAllowed()
+  if(resp.status === 200 && resp.data.downloadsEnabled === true) {
+    downloadsEnabled.value = true;
+  } else {
+    downloadsEnabled.value = false;
+  }
+})
 </script>
 
 <template>
@@ -47,6 +58,9 @@ const promptComingSoon = () => {
           <li v-if="authStore.isLoggedIn()">
             <RouterLink :to="{name: 'settings'}" class="btn btn-ghost">Settings</RouterLink>
           </li>
+          <li v-if="downloadsEnabled && authStore.isLoggedIn() && authStore.role >= 2"> <!-- Downloading Models would require at least Role 2, so hide if under this -->
+            <RouterLink to="/model-browser" class="btn btn-ghost">Model Browser</RouterLink>
+          </li>
           <li>
             <AuthButton />
           </li>
@@ -66,6 +80,9 @@ const promptComingSoon = () => {
         </li>
         <li>
           <RouterLink to="/settings" class="btn btn-ghost">Settings</RouterLink>
+        </li>
+        <li v-if="downloadsEnabled && authStore.isLoggedIn() && authStore.role >= 2"> <!-- Downloading Models would require at least Role 2, so hide if under this -->
+          <RouterLink to="/model-browser" class="btn btn-ghost">Model Browser</RouterLink>
         </li>
       </ul>
     </div>

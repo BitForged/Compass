@@ -70,3 +70,11 @@ export function getAvailableLoras() {
 export function getLimits() {
     return request({endpoint: "api/config/limits"});
 }
+
+export function isDownloadAllowed() {
+    return request({endpoint: "3papi/civitai/downloads_enabled"});
+}
+
+export function downloadModelById(modelVersionId) {
+    return request({method: "GET", endpoint: `3papi/civitai/download/${modelVersionId}`});
+}
