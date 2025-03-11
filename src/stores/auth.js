@@ -6,6 +6,7 @@ import {useAlertStore} from "@/stores/alerts";
 export const useAuthStore = defineStore('auth', () => {
     const user = ref({})
     const token = ref("")
+    const role = ref(0)
 
     user.value = JSON.parse(localStorage.getItem("user")) || {}
     token.value = localStorage.getItem("token") || ""
@@ -45,7 +46,9 @@ export const useAuthStore = defineStore('auth', () => {
         if(!isLoggedIn()) {
             return
         }
-        requestUser().then((_) => {}).catch(() => {
+        requestUser().then((res) => {
+            role.value = res.data.user.role
+        }).catch(() => {
             logout(true)
         })
 
@@ -62,5 +65,5 @@ export const useAuthStore = defineStore('auth', () => {
         return `https://cdn.discordapp.com/avatars/${user.value.id}/${user.value.avatar}.png`
     }
 
-    return {user, token, isLoggedIn, login, logout, getAvatarUrl, verifyTokenIsStillValid}
+    return {user, token, role, isLoggedIn, login, logout, getAvatarUrl, verifyTokenIsStillValid}
 })
