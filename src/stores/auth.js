@@ -13,7 +13,6 @@ export const useAuthStore = defineStore('auth', () => {
 
     async function login(code) {
         // Use the code to hit the authorization endpoint and get back a JWT
-        useAlertStore().addAlert("Logging in...", "info")
         let errored = false
         let resp = await requestLoginToken(code).catch((err) => {
             console.error(err)
