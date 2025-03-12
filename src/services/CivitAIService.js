@@ -3,7 +3,7 @@ import {useAuthStore} from "@/stores/auth";
 
 
 export const ModelTypes = {
-    CHECKPOINT: { label: "Checkpoitns", apiValue: "Checkpoint" },
+    CHECKPOINT: { label: "Checkpoints", apiValue: "Checkpoint" },
     LORA: { label: "LoRAs", apiValue: "LORA" },
     EMBEDDING: { label: "Embeddings", apiValue: "TextualInversion" }
 }
@@ -14,11 +14,17 @@ const encodeGetParams = p =>
 
 export function apiForwardRequest({endpoint, query = {}}) {
     const authStore = useAuthStore()
+    let url = "";
+    if(query === undefined) {
+        url = `${import.meta.env.VITE_API_BASE}/3papi/civitai/api-proxy/${endpoint}`
+    } else {
+        url = `${import.meta.env.VITE_API_BASE}/3papi/civitai/api-proxy/${endpoint}?${encodeGetParams(query)}`
+    }
     console.log(`Using query parameters: ${encodeGetParams(query)}`)
     return new Promise((resolve, reject) => {
         axios({
             method: "GET",
-            url: `${import.meta.env.VITE_API_BASE}/3papi/civitai/api-proxy/${endpoint}?${encodeGetParams(query)}`,
+            url: url,
             headers: {
                 "Authorization": `Bearer ${authStore.token}`
             }
@@ -33,6 +39,10 @@ export function apiForwardRequest({endpoint, query = {}}) {
             reject(err);
         });
     });
+}
+
+export function apiForwardRequestRaw(endpointStr) {
+    return apiForwardRequest({endpoint: endpointStr, query: undefined});
 }
 
 export function getModelsByQuery(query, typeId, nsfw = true, limit = 25, searchByTag = false) {

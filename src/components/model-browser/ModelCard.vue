@@ -4,6 +4,7 @@ import {useAlertStore} from "@/stores/alerts";
 import {downloadModelById} from "@/services/NavigatorService";
 
 const props = defineProps(['model', 'blurNSFW', 'downloadsEnabled'])
+const emit = defineEmits(['onTagClicked'])
 const alerts = useAlertStore()
 const selectedVersion = ref(props.model.modelVersions[0])
 
@@ -43,7 +44,7 @@ const normalizedCaseOfType = () => {
 <template>
   <div class="card card-bg-dark w-96 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all h-fit">
     <figure>
-      <img class="w-full h-96 object-cover rounded-t-lg" :src="selectedVersion.images[0].url" :alt="'Preview image of ' + model.name">
+      <img class="w-full h-96 object-cover rounded-t-lg" :src="selectedVersion?.images[0]?.url" :alt="'Preview image of ' + model.name">
     </figure>
     <div class="card-body">
       <h2 class="card-title text-white text-lg mb-2 text-ellipsis"><a :href="`https://civitai.com/models/${model.id}/${selectedVersion.id}`">{{model.name}}</a></h2>
@@ -57,14 +58,14 @@ const normalizedCaseOfType = () => {
 
 
       <div class="flex flex-wrap gap-1 mt-2">
-        <span v-for="tag in firstFiveTags" :key="tag" class="badge badge-outline bg-yellow-800/50 badge-warning badge-sm text-xs px-2 py-2">{{tag}}</span>
+        <span v-for="tag in firstFiveTags" @click="emit('onTagClicked', tag)" :key="tag" class="badge badge-outline bg-yellow-800/50 badge-warning badge-sm text-xs px-2 py-2 cursor-pointer">{{tag}}</span>
       </div>
       <!-- Version Selector -->
       <div class="mt-3">
         <label class="text-sm text-white">Select Version:</label>
         <select v-model="selectedVersion" class="select select-bordered w-full mt-1 text-white bg-neutral">
           <option v-for="version in model.modelVersions" :key="version.id" :value="version">
-            {{ version.name }}
+            {{ version.name || "No Name Provided" }}
           </option>
         </select>
       </div>

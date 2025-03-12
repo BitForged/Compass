@@ -35,6 +35,17 @@ watch([selectedType, showNSFW, searchByTag], () => {
     nsfw: showNSFW.value,
   });
 });
+
+const activateTagSearch = (tagName) => {
+  searchQuery.value = tagName;
+  searchByTag.value = true;
+  debounceSearch();
+}
+
+defineExpose({
+  activateTagSearch,
+})
+
 </script>
 
 <template>
