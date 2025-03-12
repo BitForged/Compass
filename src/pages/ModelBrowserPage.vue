@@ -125,9 +125,9 @@ onMounted(async () => {
         <ModelCard v-for="model in models" :key="model.id" :model="model" @on-tag-clicked="onTagClicked"
                    :blur-n-s-f-w="!filters.nsfw" :downloads-enabled="downloadsEnabled" />
       </div>
-      <div v-if="paginationData.nextPage !== undefined" class="join grid grid-cols-2 w-fit ml-auto mr-auto mt-5">
-        <button v-if="!isLoading" @click="onPageNext" class="join-item btn btn-outline">Load More</button>
-        <span v-else class="join-item btn btn-outline">Loading... <span class="loading loading-spinner"></span></span>
+      <div v-if="paginationData.nextPage !== undefined" class="w-fit ml-auto mr-auto mt-5">
+        <button v-if="!isLoading" @click="onPageNext" class="btn btn-outline">Load More</button>
+        <span v-else class="btn btn-outline">Loading... <span class="loading loading-spinner"></span></span>
       </div>
     </div>
 
