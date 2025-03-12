@@ -1,5 +1,5 @@
 <script setup>
-import {computed, ref} from "vue";
+import {computed, ref, watch} from "vue";
 import {useAlertStore} from "@/stores/alerts";
 import {downloadModelById} from "@/services/NavigatorService";
 
@@ -38,6 +38,19 @@ const normalizedCaseOfType = () => {
 
   return firstChar + restOfString;
 }
+
+watch(() => selectedVersion.value.id, () => {
+  // Reset download state
+  console.log("Selected version changed, resetting download state")
+  hasDownloaded.value = false
+  isDownloading.value = false
+})
+
+watch(() => props.model, () => {
+  // Force update the selected version back to the first available version
+  selectedVersion.value = props.model.modelVersions[0]
+  console.log("Model changed, resetting selected version")
+})
 
 </script>
 
