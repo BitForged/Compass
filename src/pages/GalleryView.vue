@@ -221,7 +221,7 @@ const isPageHighlighted = (page) => {
 };
 
 const shareToCivitAI = (jobId) => {
-  const imgUrl = `${import.meta.env.VITE_API_BASE}${jobId}`
+  const imgUrl = `${import.meta.env.VITE_API_BASE}/api/images/${jobId}`
   console.log("Sharing to CivitAI: ", imgUrl);
 
   const civitAILink = `https://civitai.com/intent/post?mediaUrl=${encodeURIComponent(imgUrl)}`;
