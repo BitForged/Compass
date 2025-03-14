@@ -74,6 +74,14 @@ const onLoraStrengthChanged = (loraAlias, strength) => {
   emit("loraUpdated", getLoraPromptString())
 }
 
+const getLoraDisplayEntry = (lora) => {
+  if(lora.civitai !== undefined) {
+    return `[${lora.civitai.baseModel || "?"}] ${lora.civitai.model.name || lora.name}`
+  } else if (lora.localOverride !== undefined) {
+    return `[${lora.localOverride.baseModel || "?"}] (Local) ${lora.localOverride.name || lora.name}`
+  }
+}
+
 const activateLora = (loraAlias, strength = 0.8) => {
   // noinspection JSUnresolvedReference
   console.log("Activating lora", loraAlias, strength)
@@ -145,7 +153,7 @@ defineExpose({
       <div class="grid grid-cols-12 gap-4 w-full">
         <select :disabled="disabled" class="select select-primary col-span-8" v-model="loraToAdd" :value="loraToAdd" @change="onLoraSelected($event.target.value)">
           <option disabled value="-1">Select a LoRA to enable</option>
-          <option v-for="lora in availableLoras" :key="lora.alias" :value="lora.alias">[{{lora.civitai.baseModel || "?"}}] {{lora.civitai.model.name || lora.name}}</option>
+          <option v-for="lora in availableLoras" :key="lora.alias" :value="lora.alias">{{getLoraDisplayEntry(lora)}}</option>
         </select>
         <button :disabled="disabled" class="btn btn-error col-span-4" @click="onResetSelection">Reset Selection</button>
       </div>

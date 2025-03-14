@@ -21,40 +21,44 @@ const hasConflictingWords = computed(() => {
 
 const processedTrainingWords = computed(() => {
   const words = [];
+  let modelTrainedWords = [];
   if (props.lora && props.lora.civitai) {
-    for (let idx = 0; idx < props.lora.civitai.trainedWords.length; idx++) {
-      const trigger = props.lora.civitai.trainedWords[idx];
-      if (props.splitTrainingWords === false) {
-        // Handle unsplit words (no modifications on our side)
-        // Add CSS classes to give the user a hint as to where the word/phrase is at
-        // (Unless the component is disabled, then leave off the classes so it falls back to "neutral" as a hint to the user)
-        let classes = {};
-        if (!props.disabled) {
-          classes = {
-            "badge-success": props.prompt.includes(trigger) && !props.negativePrompt.includes(trigger),
-            "badge-error": props.negativePrompt.includes(trigger) && !props.prompt.includes(trigger),
-            "badge-warning": props.prompt.includes(trigger) && props.negativePrompt.includes(trigger),
-          };
-        }
-        words.push({ word: trigger, classes });
-      } else {
-        // Attempt to iterate through each training word under trainedWords and split by `,` if enabled
-        trigger
-            .split(',')
-            .map((word) => word.trim()) // Trim leading and trailing spaces for each word
-            .forEach((word) => {
-              // Add CSS classes to give the user a hint as to where the word/phrase is at
-              let classes = {}
-              if(!props.disabled) {
-                classes = {
-                  "badge-success": props.prompt.includes(word) && !props.negativePrompt.includes(word),
-                  "badge-error": props.negativePrompt.includes(word) && !props.prompt.includes(word),
-                  "badge-warning": props.prompt.includes(word) && props.negativePrompt.includes(word),
-                }
-              }
-              words.push({ word, classes });
-            });
+    modelTrainedWords = props.lora.civitai.trainedWords
+  } else if (props.lora && props.lora.localOverride && props.lora.localOverride.trainedWords) {
+    modelTrainedWords = props.lora.localOverride.trainedWords
+  }
+  for (let idx = 0; idx < modelTrainedWords.length; idx++) {
+    const trigger = modelTrainedWords[idx];
+    if (props.splitTrainingWords === false) {
+      // Handle unsplit words (no modifications on our side)
+      // Add CSS classes to give the user a hint as to where the word/phrase is at
+      // (Unless the component is disabled, then leave off the classes so it falls back to "neutral" as a hint to the user)
+      let classes = {};
+      if (!props.disabled) {
+        classes = {
+          "badge-success": props.prompt.includes(trigger) && !props.negativePrompt.includes(trigger),
+          "badge-error": props.negativePrompt.includes(trigger) && !props.prompt.includes(trigger),
+          "badge-warning": props.prompt.includes(trigger) && props.negativePrompt.includes(trigger),
+        };
       }
+      words.push({ word: trigger, classes });
+    } else {
+      // Attempt to iterate through each training word under trainedWords and split by `,` if enabled
+      trigger
+          .split(',')
+          .map((word) => word.trim()) // Trim leading and trailing spaces for each word
+          .forEach((word) => {
+            // Add CSS classes to give the user a hint as to where the word/phrase is at
+            let classes = {}
+            if(!props.disabled) {
+              classes = {
+                "badge-success": props.prompt.includes(word) && !props.negativePrompt.includes(word),
+                "badge-error": props.negativePrompt.includes(word) && !props.prompt.includes(word),
+                "badge-warning": props.prompt.includes(word) && props.negativePrompt.includes(word),
+              }
+            }
+            words.push({ word, classes });
+          });
     }
   }
   return words;
@@ -69,14 +73,19 @@ onMounted(() => {
   <div class="card-body items-center text-center">
     <div class="header grid grid-cols-12 gap-2">
       <p v-if="!disabled" class="text-lg col-span-10"><span v-if="lora.nsfw" class="badge badge-error badge-sm align-middle">NSFW</span>
-        {{lora.civitai?.model.name || lora.alias}} <span class="col-span-2 align-middle cursor-pointer" @click="emit('removed')"> ❌</span>
+        {{lora.civitai?.model.name || lora.localOverride?.name || lora.alias}} <span class="col-span-2 align-middle cursor-pointer" @click="emit('removed')"> ❌</span>
       </p>
       <p v-else class="text-lg col-span-10"><span v-if="lora.nsfw" class="badge badge-error badge-sm align-middle">NSFW</span>
-        {{lora.civitai?.model.name || lora.alias}}
+        {{lora.civitai?.model.name || lora.localOverride?.name || lora.alias}}
       </p>
     </div>
-    <span v-if="lora.civitai !== undefined && lora.civitai.baseModel !== undefined" class="text-sm italic badge badge-accent">{{lora.civitai.baseModel}}</span>
-    <span v-else class="text-sm italic badge badge-error">Unknown Model Type</span>
+    <p v-if="lora.localOverride" class="text-sm">{{lora.civitai?.model.description || lora.localOverride?.description}}</p>
+    <div class="flex flex-wrap gap-2 mt-2">
+      <span v-if="lora.civitai !== undefined && lora.civitai.baseModel !== undefined" class="text-sm italic badge badge-accent">{{lora.civitai.baseModel}}</span>
+      <span v-else-if="lora.localOverride !== undefined && lora.localOverride.baseModel !== undefined" class="text-sm italic badge badge-accent">{{lora.localOverride.baseModel}}</span>
+      <span v-else class="text-sm italic badge badge-error">Unknown Model Type</span>
+      <span v-if="lora.localOverride !== undefined" class="text-sm italic badge badge-warning">Local To This Instance</span>
+    </div>
     <input :disabled="disabled" type="range" class="range range-sm" :class="{'range-primary': !disabled, 'range-test': disabled}" id="strength" step="0.1" min="0.0" max="1.0" :value="strength" @change="strength = $event.target.value; emit('strengthChanged', strength)"/>
     <p class="text-sm">{{strength}}</p>
     <div class="card-actions h-fit">
