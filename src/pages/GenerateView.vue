@@ -1191,8 +1191,8 @@ onUnmounted(() => {
         </div>
       </div>
     </div>
-    <div class="mt-5">
-      <div class="form-control border border-opacity-50 border-gray-500 cornered">
+    <div class="mt-5 grid grid-cols-12 gap-4">
+      <div class="form-control border border-opacity-50 col-span-12 md:col-span-9 border-gray-500 cornered">
         <span v-show="isGenSettingsExpanded" @click="toggleGenSettings" class="label ms-2">Generation Settings</span>
         <span v-show="!isGenSettingsExpanded" @click="toggleGenSettings" class="label ms-2">Generation Settings (Hidden; Click to expand)</span>
         <div v-show="recalledImageId !== null && isGenSettingsExpanded" class="m-3">
