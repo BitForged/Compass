@@ -2,7 +2,7 @@
 import { ref, onMounted, onUnmounted } from "vue";
 
 const images = ref([]);
-const basePath = "/example-images"; // Adjust this to match your actual image storage path
+const basePath = "/example-images";
 const currentIndex = ref(0);
 let interval = null;
 
@@ -15,7 +15,7 @@ const prevSlide = () => {
 };
 
 const startAutoplay = () => {
-  interval = setInterval(nextSlide, 3000); // Auto-slide every 3 seconds
+  interval = setInterval(nextSlide, 3000);
 };
 
 const stopAutoplay = () => {
@@ -24,7 +24,7 @@ const stopAutoplay = () => {
 
 onMounted(async () => {
   try {
-    const response = await fetch(`${basePath}/image-manifest.json`); // Update with your actual manifest URL
+    const response = await fetch(`${basePath}/image-manifest.json`);
     images.value = await response.json();
     // Shuffle the array
     images.value = images.value.sort(() => Math.random() - 0.5);
