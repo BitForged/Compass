@@ -146,7 +146,7 @@ defineExpose({
 </script>
 
 <template>
-  <div v-if="lorasFromServer.length > 0" class="border border-opacity-50 rounded-md border-gray-500 p-2">
+  <div v-if="lorasFromServer.length > 0" class="rounded-md p-2">
     <span v-if="!isExpanded" class="text-sm" @click="isExpanded = !isExpanded">LoRA Selection (Click to Expand)</span>
     <span v-else @click="isExpanded = !isExpanded">LoRA Selection</span>
     <div class="mt-2" v-show="isExpanded">
