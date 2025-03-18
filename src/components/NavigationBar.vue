@@ -2,11 +2,14 @@
 import AuthButton from "@/components/AuthButton.vue";
 import { RouterLink } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
-import {computed, onMounted, ref} from "vue";
+import {computed, onMounted, ref, toRaw, watch} from "vue";
 import {useAlertStore} from "@/stores/alerts";
 import {isDownloadAllowed} from "@/services/NavigatorService";
+import {storeToRefs} from "pinia";
 
 const authStore = useAuthStore();
+
+const authRef = storeToRefs(authStore)
 
 const isDev = import.meta.env.VITE_DEV || false;
 const downloadsEnabled = ref(false)
@@ -19,9 +22,41 @@ const promptComingSoon = () => {
   useAlertStore().addAlert("This feature is coming soon!", "info");
 };
 
+const avatarUrl = computed(() => {
+  if(authStore.isLoggedIn() && authStore.getAvatarUrl() !== "") {
+    return authStore.getAvatarUrl();
+  } else {
+    return "/generic-avatar.png";
+  }
+})
+
+const printAuthToken = () => {
+  console.debug("Current user role: ", authStore.role)
+  console.debug("Current session data: ", toRaw(authStore.user))
+  console.debug(authStore.token)
+  console.debug("The above is your session data. Do not share this with anyone!")
+}
+
 onMounted(async () => {
   if(authStore.isLoggedIn()) {
     let resp = await isDownloadAllowed()
+    downloadsEnabled.value = resp.status === 200 && resp.data.downloadsEnabled === true;
+  }
+})
+
+// We primarily watch this so that we can re-poll whether model downloading is enabled or not.
+// That endpoint requires authentication, and on a fresh login the Navigation Bar component has
+// already skipped the check since the user was logged out. This effectively forces a re-check.
+watch(authRef.user, async (newVal) => {
+  console.debug("Auth state changed", newVal);
+  if(!newVal) {
+    downloadsEnabled.value = false;
+    console.debug("Logged out");
+  } else {
+    console.debug("Logged in");
+    // Check the isDownloadAllowed() endpoint to see if we can indicate that downloads are enabled
+    let resp = await isDownloadAllowed()
+    console.debug("Got response from isDownloadAllowed()", resp.data);
     downloadsEnabled.value = resp.status === 200 && resp.data.downloadsEnabled === true;
   }
 })
@@ -88,7 +123,7 @@ onMounted(async () => {
       <AuthButton />
       <div v-if="authStore.isLoggedIn()" class="avatar pl-2">
         <div class="rounded-full w-12 h-12 m-1">
-          <img :src="authStore.getAvatarUrl()" alt="avatar" class="w-full h-full object-cover" />
+          <img @dblclick="printAuthToken" :src="avatarUrl" alt="avatar" class="w-full h-full object-cover" />
         </div>
       </div>
     </div>
