@@ -31,3 +31,112 @@
     color: #6b7280;
     opacity: 0.9;
 }
+
+.glow {
+    animation: glow 1.3s ease-in-out infinite alternate;
+    box-shadow: 0 0 10px;
+}
+
+.btn-success:hover:not([disabled]).glow-hover, .btn-success:not([disabled]).forced-glow {
+    animation: glow-success 1.5s ease-in-out infinite alternate;
+    box-shadow: 0 0 15px #0dd727;
+}
+
+.btn-secondary:hover:not([disabled]).glow-hover, .btn-secondary:not([disabled]).forced-glow {
+    animation: glow-warning 1.5s ease-in-out infinite alternate;
+    box-shadow: 0 0 15px #ff9900;
+}
+
+.btn-warning:hover:not([disabled]).glow-hover, .btn-warning:not([disabled]).forced-glow {
+    animation: glow-warning 1.5s ease-in-out infinite alternate;
+    box-shadow: 0 0 15px #facc15;
+}
+
+.btn-error:hover:not([disabled]).glow-hover, .btn-error:not([disabled]).forced-glow {
+    animation: glow-error 1.5s ease-in-out infinite alternate;
+    box-shadow: 0 0 15px #ff3860;
+}
+
+.btn-info:hover:not([disabled]).glow-hover, .btn-info:not([disabled]).forced-glow {
+    animation: glow-info 1.5s ease-in-out infinite alternate;
+    box-shadow: 0 0 15px #00d0ff;
+}
+
+.btn-accent:hover:not([disabled]).glow-hover, .btn-accent:not([disabled]).forced-glow {
+    animation: glow-accent 1.5s ease-in-out infinite alternate;
+    box-shadow: 0 0 15px #a78bfa;
+}
+
+.btn-primary:hover:not([disabled]).glow-hover, .btn-primary:not([disabled]).forced-glow {
+    animation: glow-primary 1.5s ease-in-out infinite alternate;
+    box-shadow: 0 0 15px #0070f3;
+}
+
+@keyframes glow {
+    from {
+        box-shadow: 0 0 15px #a6afb7;
+    }
+    to {
+        box-shadow: 0 0 25px #e5e9ea;
+    }
+}
+
+@keyframes glow-secondary {
+    from {
+        box-shadow: 0 0 15px #ff9900;
+    }
+    to {
+        box-shadow: 0 0 25px #ff9900;
+    }
+}
+
+@keyframes glow-warning {
+    from {
+        box-shadow: 0 0 15px #facc15;
+    }
+    to {
+        box-shadow: 0 0 25px #facc15;
+    }
+}
+
+@keyframes glow-error {
+    from {
+        box-shadow: 0 0 15px #ff3860;
+    }
+}
+
+@keyframes glow-info {
+    from {
+        box-shadow: 0 0 15px #00d0ff;
+    }
+    to {
+        box-shadow: 0 0 25px #00d0ff;
+    }
+}
+
+@keyframes glow-success {
+    from {
+        box-shadow: 0 0 15px #0dd727;
+    }
+    to {
+        box-shadow: 0 0 25px #0dd727;
+    }
+}
+
+@keyframes glow-accent {
+    from {
+        box-shadow: 0 0 15px #a78bfa;
+    }
+    to {
+        box-shadow: 0 0 25px #a78bfa;
+    }
+}
+
+@keyframes glow-primary {
+    from {
+        box-shadow: 0 0 15px #0070f3;
+    }
+    to {
+        box-shadow: 0 0 25px #0070f3;
+    }
+}
