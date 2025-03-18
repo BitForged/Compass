@@ -35,6 +35,9 @@ onMounted(() => {
   if(router.currentRoute.value.query.category) {
     console.debug("Setting category from query", router.currentRoute.value.query.category);
     setCategory(router.currentRoute.value.query.category);
+  } else {
+    // Navigate to the first available setting category
+    setCategory(settingsCategories.value[0].id);
   }
 })
 
