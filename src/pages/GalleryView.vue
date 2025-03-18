@@ -303,11 +303,12 @@ onMounted(async () => {
           </div>
           <div class="card-actions grid grid-cols-2 3xl:grid-cols-3 gap-2 mt-2">
             <button @click="onCategoryUpdate(job.id)" class="btn btn-accent">Categorize</button>
-            <RouterLink :to="{ name: 'img2img', query: { input: job.id}}" class="btn btn-info">Img2Img</RouterLink>
-            <RouterLink :to="{ name: 'txt2img', query: { recall: job.id}}" class="btn btn-success">Recall</RouterLink>
+            <!-- FIXME: Img2Img seems to not work correctly currently (API broken?), disable, look into later -->
+            <!-- <RouterLink :to="{ name: 'img2img', query: { input: job.id}}" class="btn btn-info">Img2Img</RouterLink> -->
+            <RouterLink :to="{ name: 'txt2img', query: { recall: job.id}}" class="btn btn-success forced-glow">Recall</RouterLink>
             <button v-if="!isPendingDelete(job)" @click="setPendingDelete(job)" class="btn btn-warning">Delete?</button>
             <button v-else @click="onDeleteClick(job)" class="btn btn-error btn-delete">Confirm!</button>
-            <button v-if="isShareToCivitAIEnabled" @click="shareToCivitAI(job.id)" class="btn btn-primary"><oh-vue-icon name="ri-share-box-fill"/>CivitAI</button>
+            <button v-if="isShareToCivitAIEnabled" @click="shareToCivitAI(job.id)" class="btn btn-primary glow-hover"><oh-vue-icon name="ri-share-box-fill"/>CivitAI</button>
           </div>
           <div class="card-footer">
             <CategorySelect v-if="updatingCategoryForJob === job.id" @onCategorySelected="onCategoryUpdateConfirmed" show-remove-option="true" />
