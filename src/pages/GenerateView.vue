@@ -30,8 +30,8 @@ const imageParams = ref({
     model: {},
     sampler: {},
     scheduler: {},
-    steps: 50,
-    cfg_scale: 7.0,
+    steps: 35,
+    cfg_scale: 5.0,
     seed: -1,
     subseed: -1,
     subseed_strength: null,
@@ -106,6 +106,10 @@ const progressClasses = computed(() => {
     "progress-error": currentProgress.value >= 75,
   };
 });
+
+const isRandomized = computed(() => {
+  return imageParams.value.options.seed === -1 && (imageParams.value.options.subseed === -1 || imageParams.value.options.subseed === null);
+})
 
 const showTipsModal = ref(false);
 const showAdvancedOptions = ref(false);
@@ -278,6 +282,7 @@ const initializeData = async () => {
 const sendJobToNavigator = () => {
   if(isImageParamsValid.value) {
     console.log("Sending job to Navigator", imageParams.value);
+    progressText.value = "Firing off request..."
     isWorking.value = true;
     let job = {
       prompt: `${imageParams.value.options.prompt} ${loraPromptAddition.value}`,
@@ -377,6 +382,7 @@ const sendJobToNavigator = () => {
 const sendUpscaleJobToNavigator = (jobId) => {
   console.log("Sending upscale job to Navigator", jobId);
   isWorking.value = true;
+  progressText.value = "Firing off request..."
   let job = {}
   // Check to see if we have custom HRF steps defined, if so, attach it to the Navigator request
   const upscaleSteps = settings.getSetting("upscaleSteps")
@@ -606,6 +612,20 @@ const copyImageLink = () => {
   }
 }
 
+const onRandomizationClick = () => {
+  imageParams.value.options.seed = -1;
+  imageParams.value.options.subseed = null;
+  imageParams.value.options.subseed_strength = null;
+}
+
+const onNewVariationClick = (variation) => {
+  console.log("Clicked on variation: ", variation);
+  isWorking.value = true;
+  imageParams.value.options.subseed = -1;
+  imageParams.value.options.subseed_strength = variation;
+  sendJobToNavigator(() => {});
+}
+
 // Variation is a number between 0 and 1
 // 0 is the weakest variation (barely any change), 1 is the strongest (most change)
 const onVariationClick = (variation) => {
@@ -662,6 +682,8 @@ const recallJobParameters = (imageId, cb, shouldSetRecall = true, onRecallFail) 
     let params = resp.data.parameters;
     imageParams.value.options.prompt = params["Prompt"];
     imageParams.value.options.negative_prompt = params["Negative prompt"];
+    adjustHeight(positivePromptArea.value)
+    adjustHeight(negativePromptArea.value)
     let extractedModelName = extractModelNameFromInfo(resp.data.info);
     let locatedModel = availableModels.value.find((model) => model.model_name === extractedModelName);
     if(locatedModel) {
@@ -1081,6 +1103,17 @@ const applyScreenResolution = () => {
   imageParams.value.height = deviceResolution.value.height;
 }
 
+watch(isWorking, (newValue) => {
+  if(newValue === true) {
+    console.debug("Starting job");
+    maxProgress.value = imageParams.value.options.steps; // This should kick off the progress bar right away
+    lastJob.value = null;
+    isGenSettingsExpanded.value = false;
+    isShowingLoraAdditions.value = false;
+    loraSelector.value.forceCollapse();
+  }
+})
+
 onMounted(async () => {
   toggleBodyScroll(showTipsModal.value);
   await initializeData();
@@ -1105,6 +1138,7 @@ onMounted(async () => {
     img2imgParams.value.startingInputJobId = router.currentRoute.value.query.input;
     recallJobParameters(router.currentRoute.value.query.input, null, false);
   }
+  document.addEventListener('keydown', handleEscape);
 });
 
 onUnmounted(() => {
@@ -1116,236 +1150,281 @@ onUnmounted(() => {
   navigatorRt.off("task-failed", onJobFailed);
   navigatorRt.off("connect", onConnect);
   navigatorRt.off("disconnect", onDisconnect);
+  document.removeEventListener('keydown', handleEscape);
 });
+
+const positivePromptArea = ref(null);
+const negativePromptArea = ref(null);
+
+const openFullscreenPreview = ref(false);
+
+const handleEscape = (event) => {
+  if (event.key === 'Escape' && openFullscreenPreview.value) {
+    openFullscreenPreview.value = false;
+  }
+}
+
+function adjustHeight(element){
+  element.style.height = "1px";
+  element.style.height = (25+element.scrollHeight)+"px";
+}
 </script>
 
 <template>
   <div>
-    <div role="tablist" class="tabs tabs-boxed sm:w-3/4 md:w-1/2 m-4 ml-auto mr-auto items-center">
+    <!-- Img2Img is currently "soft disabled" -->
+    <!-- FIXME: Img2Img seems to be broken, the API returns a 422 error, Forge API changed possibly? -->
+    <!-- After investigating and fixing, remove the v-if directive below -->
+    <div v-if="isImg2Img" role="tablist" class="tabs tabs-boxed sm:w-3/4 md:w-1/2 m-4 ml-auto mr-auto items-center">
       <RouterLink :to="{ name: 'txt2img' }" class="tab" active-class="tab-active" role="tab">Txt2Img</RouterLink>
       <RouterLink :to="{ name: 'img2img' }" class="tab" active-class="tab-active" role="tab">Img2Img</RouterLink>
     </div>
-    <div class="grid grid-cols-12 gap-4">
-      <div class="prompt-container col-span-12 md:col-span-9">
-        <div class="form-control border border-opacity-50 border-gray-500 cornered">
-          <span class="label justify-normal ms-2">Prompting
-            <oh-vue-icon @click="showTipsModal = true" name="hi-information-circle" class="ml-2"/>
-            <span v-if="!lorasResolved" class="italic text-sm text-neutral-500 align-middle">&nbsp; Resolving LoRAs... <span class="loading loading-dots align-middle"></span></span>
-            <span v-if="isWorking" class="italic text-sm text-neutral-500 align-middle">&nbsp; Generating... <span class="loading loading-dots align-middle"></span></span>
-          </span>
-          <span v-if="isImg2Img" class="m-3 text-sm text-warning">When using Img2Img, you should try to use a prompt that describes the original image (preferably the original!), while incorporating the changes you wish to see.</span>
-          <span v-if="getPredefinedPrompts.length > 0" class="m-4 text-sm italic">To apply a predefined prompt, choose one below:</span>
-          <div v-if="getPredefinedPrompts.length > 0" class="row">
-            <select v-model="selectedPredefinedPrompt" class="m-3 select select-bordered w-2/3 md:w-2/3 lg:w-2/3 xl:w-1/5">
-              <option v-for="prompt in getPredefinedPrompts" :key="prompt.id" :value="prompt">{{ prompt.name }}</option>
-            </select>
-            <button class="btn btn-success" @click="applyPredefinedPrompt">Apply</button>
+    <div class="grid grid-cols-12">
+      <div class="col-span-12 md:col-span-9 max-md:pb-5">
+        <div class="prompt-container col-span-12 md:col-span-9 order-1">
+          <div class="form-control border-2 border-opacity-90 border-zinc-700 cornered">
+            <span class="label justify-normal ms-2">Prompting
+              <oh-vue-icon @click="showTipsModal = true" name="hi-information-circle" class="ml-2"/>
+              <span v-if="!lorasResolved" class="italic text-sm text-neutral-500 align-middle">&nbsp; Resolving LoRAs... <span class="loading loading-dots align-middle"></span></span>
+              <span v-if="isWorking" class="italic text-sm text-neutral-500 align-middle">&nbsp; Generating... <span class="loading loading-dots align-middle"></span></span>
+            </span>
+            <span v-if="isImg2Img" class="m-3 text-sm text-warning">When using Img2Img, you should try to use a prompt that describes the original image (preferably the original!), while incorporating the changes you wish to see.</span>
+            <span v-if="getPredefinedPrompts.length > 0" class="m-4 text-sm italic">To apply a predefined prompt, choose one below:</span>
+            <div v-if="getPredefinedPrompts.length > 0" class="row">
+              <select v-model="selectedPredefinedPrompt" class="m-3 select select-bordered w-2/3 md:w-2/3 lg:w-2/3 xl:w-1/5">
+                <option v-for="prompt in getPredefinedPrompts" :key="prompt.id" :value="prompt">{{ prompt.name }}</option>
+              </select>
+              <button class="btn btn-success" @click="applyPredefinedPrompt">Apply</button>
+            </div>
+            <textarea ref="positivePromptArea" :disabled="recalledImageId !== null" @change="adjustHeight($event.target)" @keyup="adjustHeight($event.target)" v-model="imageParams.options.prompt" class="textarea h-24 textarea-bordered m-3" placeholder="Enter your prompt here! What do you want to see in the image?"></textarea>
+            <textarea ref="negativePromptArea" id="negativePrompt" @change="adjustHeight($event.target)" @keyup="adjustHeight($event.target)" :disabled="recalledImageId !== null" v-model="imageParams.options.negative_prompt" class="textarea h-24 textarea-bordered m-3" placeholder="Optionally, enter a negative prompt - which describes what you don't want to see in the image."></textarea>
+            <span v-if="!isRandomized && !recalledImageId" @click="onRandomizationClick" class="m-3 mt-1 text-sm text-accent cursor-pointer">Note: You have a seed set, click to randomize this.</span>
+            <span v-if="recalledImageId !== null" class="m-3 mt-1 text-sm text-error">Warning: You have a recalled image active, the prompt and other settings cannot be changed as changing the settings would cause variations to be invalid. Clear the recalled image in "Generation Settings" to unlock editing of these.</span>
+            <LoraSelector ref="loraSelector" :disabled="recalledImageId !== null" :prompt="imageParams.options.prompt" :negative-prompt="imageParams.options.negative_prompt" @lorasResolved="lorasResolved = true" @onWordClicked="onLoraWordClicked" @loraUpdated="onLoraUpdate" class="m-2" />
+            <p v-if="loraPromptAddition.length > 0 && isShowingLoraAdditions" class="text-sm italic text-gray-400 m-2" @click="isShowingLoraAdditions = !isShowingLoraAdditions">The following will automatically be appended to your prompt due to your LoRA choices: {{loraPromptAddition}}</p>
+            <p v-else-if="!isShowingLoraAdditions && loraPromptAddition.length > 0" class="text-sm italic text-gray-400 m-2" @click="isShowingLoraAdditions = !isShowingLoraAdditions">LoRA text will automatically be appended to your prompt, click to show</p>
           </div>
-          <textarea :disabled="recalledImageId !== null" v-model="imageParams.options.prompt" class="textarea h-24 textarea-bordered m-3" placeholder="Enter your prompt here! What do you want to see in the image?"></textarea>
-          <textarea :disabled="recalledImageId !== null" v-model="imageParams.options.negative_prompt" class="textarea h-24 textarea-bordered m-3" placeholder="Optionally, enter a negative prompt - which describes what you don't want to see in the image."></textarea>
-          <span v-if="imageParams.options.seed !== -1" class="m-3 mt-1 text-sm text-accent">Note: You have a seed set, visit "Generation Settings" => Advanced Options to change/randomize this.</span>
-          <span v-if="recalledImageId !== null" class="m-3 mt-1 text-sm text-error">Warning: You have a recalled image active, the prompt and other settings cannot be changed as changing the settings would cause variations to be invalid. Clear the recalled image in "Generation Settings" to unlock editing of these.</span>
-          <LoraSelector ref="loraSelector" :disabled="recalledImageId !== null" :prompt="imageParams.options.prompt" :negative-prompt="imageParams.options.negative_prompt" @lorasResolved="lorasResolved = true" @onWordClicked="onLoraWordClicked" @loraUpdated="onLoraUpdate" class="m-2" />
-          <p v-if="loraPromptAddition.length > 0 && isShowingLoraAdditions" class="text-sm italic text-gray-500 m-2" @click="isShowingLoraAdditions = !isShowingLoraAdditions">The following will automatically be appended to your prompt due to your LoRA choices: {{loraPromptAddition}}</p>
-          <p v-else-if="!isShowingLoraAdditions && loraPromptAddition.length > 0" class="text-sm italic text-gray-500 m-2" @click="isShowingLoraAdditions = !isShowingLoraAdditions">LoRA text will automatically be appended to your prompt, click to show</p>
         </div>
       </div>
-      <div class="generate-button-container col-span-12 md:col-span-3 pt-0 m-3 md:pt-10">
+      <div class="generate-button-container pt-0 m-3 md:pt-10 col-span-12 md:col-span-3">
         <div class="row mb-2">
-          <button v-if="isImageParamsValid" @click="sendJobToNavigator" :disabled="isWorking || !isConnectedToRt" class="btn btn-success w-full mb-5">Generate</button>
-          <button v-else class="btn btn-disabled text-opacity-100 w-full mb-5">Generate</button>
-          <button :disabled="!isInterruptible" @click="onInterruptClicked" class="btn btn-error text-white text-opacity-100 w-full">Interrupt / Cancel</button>
+          <button v-if="isRandomized" @click="sendJobToNavigator" :disabled="isWorking || !isConnectedToRt || !isImageParamsValid" class="btn btn-success forced-glow w-full mb-5">Generate</button>
+          <button v-else @click="sendJobToNavigator" :disabled="isWorking || !isConnectedToRt || !isImageParamsValid" class="btn btn-success forced-glow w-full">Regenerate From Seed</button>
+          <div v-if="!isRandomized" class="row join w-full py-2">
+            <button :disabled="isWorking || !isConnectedToRt || !isImageParamsValid" class="btn btn-accent btn-outline join-item w-1/2 glow-hover" @click="onNewVariationClick(0.3)">Generate Subtle Variation</button>
+            <button :disabled="isWorking || !isConnectedToRt || !isImageParamsValid" class="btn btn-accent btn-outline join-item w-1/2 glow-hover" @click="onNewVariationClick(0.7)">Generate Strong Variation</button>
+          </div>
+          <button :disabled="!isInterruptible" @click="onInterruptClicked" class="btn btn-error text-white text-opacity-100 w-full mb-5">Interrupt / Cancel</button>
         </div>
         <div class="row">
           <h3 class="text-center text-lg font-bold">Status</h3>
           <p class="text-center mt-2">{{progressText}}</p>
-          <progress v-if="currentJobId !== null" class="progress w-full" :class="progressClasses" :value="currentProgress" :max="maxProgress"></progress>
+          <progress v-if="isWorking" class="progress w-full" :class="progressClasses" :value="currentProgress" :max="maxProgress"></progress>
         </div>
       </div>
     </div>
-    <div v-if="isImg2Img" class="mt-5" id="img2img">
-      <div class="form-control border border-opacity-50 border-gray-500 cornered">
-        <span class="label ms-2">Starting Input</span>
-        <div class="m-3">
-          <img v-if="img2imgParams.startingInputJobId !== null" class="m-3 w-3/4 md:w-1/2 lg:w-1/6" :src="getLinkForJobId(img2imgParams.startingInputJobId)" alt="Starting Input" />
-          <span v-if="img2imgParams.startingInputJobId !== null" class="label">Reference image ID: {{img2imgParams.startingInputJobId}}</span>
-          <span v-if="img2imgParams.startingInputJobId !== null" class="label italic text-success">You're using a previous job as a starting point. You can also choose to utilize a custom uploaded image by clearing the input below.</span>
-          <img v-if="img2imgParams.startingInput !== null" class="m-3 w-3/4 md:w-1/2 lg:w-1/6" :src="getPreviewOfFile" alt="Starting Input" />
-          <input v-if="img2imgParams.startingInputJobId === null" type="file" @change="setStartingInput" class="m-3 file-input file-input-bordered file-input-success w-full max-w-xs" /><br/>
-          <button @click="img2imgParams.startingInputJobId = null; img2imgParams.startingInput = null; imageParams.options.seed = -1" class="m-3 btn btn-info">Clear Input</button>
+    <div class="grid grid-cols-12 gap-2">
+      <!-- "Left" side of page -->
+      <div class="col-span-12 md:col-span-9">
+        <div v-if="isImg2Img" class="mt-5" id="img2img">
+          <div class="form-control border-2 border-opacity-90 border-zinc-700 cornered">
+            <span class="label ms-2">Starting Input</span>
+            <div class="m-3">
+              <img v-if="img2imgParams.startingInputJobId !== null" class="m-3 w-3/4 md:w-1/2 lg:w-1/6" :src="getLinkForJobId(img2imgParams.startingInputJobId)" alt="Starting Input" />
+              <span v-if="img2imgParams.startingInputJobId !== null" class="label">Reference image ID: {{img2imgParams.startingInputJobId}}</span>
+              <span v-if="img2imgParams.startingInputJobId !== null" class="label italic text-success">You're using a previous job as a starting point. You can also choose to utilize a custom uploaded image by clearing the input below.</span>
+              <img v-if="img2imgParams.startingInput !== null" class="m-3 w-3/4 md:w-1/2 lg:w-1/6" :src="getPreviewOfFile" alt="Starting Input" />
+              <input v-if="img2imgParams.startingInputJobId === null" type="file" @change="setStartingInput" class="m-3 file-input file-input-bordered file-input-success w-full max-w-xs" /><br/>
+              <button @click="img2imgParams.startingInputJobId = null; img2imgParams.startingInput = null; imageParams.options.seed = -1" class="m-3 btn btn-info">Clear Input</button>
+            </div>
+          </div>
+        </div>
+        <div v-if="isImg2Img" class="mt-5" id="img2img-inpainting">
+          <div class="form-control border-2 border-opacity-90 border-zinc-700 cornered">
+            <span class="label ms-2">Inpainting</span>
+            <div class="m-3">
+              <label class="cursor-pointer">
+                <input v-model="img2imgParams.inpainting" class="align-middle checkbox checkbox-secondary" type="checkbox" />
+                <span class="ms-2 align-middle">Enable Inpainting?</span>
+                <span class="ms-2 align-middle text-warning italic">Experimental - Not suitable for mobile!</span>
+              </label>
+              <span class="label mt-2">Inpainting is a technique to select parts of an image for replacement. This can be useful for replacing unwanted objects or artifacts from an image.</span>
+              <button v-if="img2imgParams.inpainting" @click="getMaskFromCanvas" class="m-3 btn btn-info">Get Mask</button>
+              <canvas v-show="img2imgParams.inpainting" ref="inpaintingCanvas" class="m-3 border border-opacity-90 border-gray-700 cornered"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="mt-5">
+          <div class="form-control border-2 border-opacity-100 col-span-12 md:col-span-9 border-zinc-700 cornered">
+            <span v-show="isGenSettingsExpanded" @click="toggleGenSettings" class="label ms-2">Generation Settings</span>
+            <span v-show="!isGenSettingsExpanded" @click="toggleGenSettings" class="label ms-2">Generation Settings (Hidden; Click to expand)</span>
+            <div v-show="recalledImageId !== null && isGenSettingsExpanded" class="m-3">
+              <span>Recalled image ID: {{recalledImageId}}</span>
+              <img v-if="recalledImageId !== null" class="md:w-1/2 xl:w-1/4 rounded-md drop-shadow-lg mt-3" :src="getLinkForJobId(recalledImageId)" alt="Recalled Image" />
+              <div class="grid grid-cols-2 gap-4 xl:w-1/4 mt-3">
+                <button @click="onClearRecallClick" class="btn btn-info">Clear Recall</button>
+                <button @click="onRecallVariationClick(0.3)" :disabled="isWorking" class="btn btn-accent glow-hover">Vary (Weak)</button>
+                <button @click="onRecallVariationClick(0.7)" :disabled="isWorking" class="btn btn-accent glow-hover">Vary (Strong)</button>
+                <button @click="onRecallUpscaleClick" :disabled="!isRecalledImageEligibleForUpscale || isWorking" class="btn btn-secondary forced-glow">Upscale 2x</button>
+              </div>
+            </div>
+            <div v-show="recalledImageId === null && isGenSettingsExpanded" class="m-3">
+              <span>You do not currently have an image recalled. Enter an Image ID below to recall:</span><br/>
+              <input v-model="recallTextEntry" type="text" class="mt-4 input input-md input-bordered"/>
+              <button :disabled="isWorking || !recallTextEntry" class="ml-1 mb-2 btn btn-primary" @click="onRecallClick">Recall</button><br/>
+              <span v-if="recallEntryFailed" class="text-sm text-error">The specified Image ID could not be recalled. The image may not exist, or Navigator encountered an issue attempting to check the metadata.</span>
+              <span v-if="!recallEntryFailed" class="text-sm text-gray-400 italic">Note: Upon a successful recall, any current generation parameters will be overwritten.</span>
+            </div>
+            <div v-show="isGenSettingsExpanded" class="m-3">
+              <div>
+                <label class="label">Category</label>
+                <CategorySelect :category-id="imageParams.categoryId" @onCategorySelected="onCategorySelected" allow-modify="true" />
+                <label v-if="imageParams.categoryId !== null" class="label">This image will be categorized under: {{getCategoryName(imageParams.categoryId)}}</label>
+                <label v-else class="label">This image will not be categorized.</label>
+              </div>
+              <div class="form-control">
+                <label class="label">Target Width</label>
+                <div class="grid grid-cols-12 gap-4">
+                  <input disabled v-model="imageParams.width" type="range" :class="rangeColorClasses" class="col-span-8 md:col-span-10 range" min="64" max="4096" />
+                  <input :disabled="recalledImageId !== null" v-model="imageParams.width" type="number" class="col-span-4 md:col-span-2  md:w-3/4 input input-primary" @blur="validateImageSizeParams" />
+                </div>
+              </div>
+              <div class="form-control pb-3">
+                <label class="label">Target Height</label>
+                <div class="grid grid-cols-12 gap-4">
+                  <input disabled v-model="imageParams.height" type="range" :class="rangeColorClasses" class="col-span-8 md:col-span-10 range" min="64" max="4096" />
+                  <input :disabled="recalledImageId !== null" v-model="imageParams.height" type="number" class="col-span-4 md:col-span-2 md:w-3/4 input input-primary" @blur="validateImageSizeParams" />
+                </div>
+                <span v-if="!isUsingDeviceResolution && !doesSizeExceedLimit && !isImg2Img" class="text-sm text-success cursor-pointer mt-3" @click="applyScreenResolution">Looking to make a wallpaper? Click here to apply half of your device's screen resolution.</span>
+                <span v-if="!isUsingDeviceResolution && !doesSizeExceedLimit && !isImg2Img" class="text-sm text-success cursor-pointer mt-3 mb-3" @click="applyScreenResolution">(It can then be upscaled to the full resolution)</span>
+                <span v-if="doesSizeRequireUpscale && !doesSizeExceedLimit"><em>Note: Due to the chosen size, your image will generate at half-resolution and will be upscaled to the full resolution.</em></span>
+                <span class="text-error" v-if="doesSizeExceedLimit"><em>Error: The chosen size exceeds the maximum size, please choose a lower resolution.</em></span>
+              </div>
+              <div class="form-control">
+                <label class="label">Aspect Ratio/Size Preview</label>
+                <div class="preview-box-container mb-5">
+                  <SizePreviewBox :height="imageParams.height" :width="imageParams.width" />
+                </div>
+              </div>
+              <div class="form-control">
+                <label class="mb-2">
+                  <span class="ms-2">Image Model</span>
+                </label>
+                <select :disabled="recalledImageId !== null" id="model-selector" v-model="imageParams.options.model" class="select neutral-border mb-2">
+                  <option v-for="model in availableModels" :value="model" :key="model.model_name">{{model.friendly_name ? model.friendly_name : model.model_name}}</option>
+                </select>
+              </div>
+              <div class="form-control">
+                <label class="cursor-pointer mb-2 mt-2">
+                  <input type="checkbox" :disabled="recalledImageId !== null" v-model="imageParams.options.image_enhancements" class="checkbox checkbox-primary align-middle">
+                  <span class="ms-2">Enable Image Enhancements?</span>
+                </label>
+              </div>
+              <div class="form-control mt-2 mb-2">
+                <label class="cursor-pointer">
+                  <input v-model="showAdvancedOptions" class="align-middle checkbox checkbox-secondary" type="checkbox" />
+                  <span class="ms-2 align-middle">Show Advanced Options?</span>
+                </label>
+              </div>
+              <div v-if="showAdvancedOptions" class="form-control">
+                <label class="mb-2">
+                  <span class="ms-2">Sampler</span>
+                </label>
+                <select :disabled="recalledImageId !== null" v-model="imageParams.options.sampler" class="select neutral-border mb-2">
+                  <option v-for="sampler in availableSamplers" :value="sampler" :key="sampler.name">{{sampler.name}}</option>
+                </select>
+              </div>
+              <div v-if="showAdvancedOptions" class="form-control">
+                <label class="mb-2">
+                  <span class="ms-2">Scheduler</span>
+                </label>
+                <select :disabled="recalledImageId !== null" v-model="imageParams.options.scheduler" class="select neutral-border mb-2">
+                  <option v-for="scheduler in availableSchedulers" :value="scheduler" :key="scheduler.name">{{scheduler.label}}</option>
+                </select>
+              </div>
+              <div v-if="showAdvancedOptions" class="form-control">
+                <label class="cursor-pointer mb-2">
+                  <span class="ms-2">Steps</span>
+                </label>
+                <input :disabled="recalledImageId !== null" v-model="imageParams.options.steps" class="input w-1/2 md:w-1/4 lg:w-1/12 neutral-border" type="number" min="1" max="75" />
+              </div>
+              <div v-if="showAdvancedOptions" class="form-control mt-2">
+                <label class="cursor-pointer mb-2">
+                  <span class="ms-2 align-middle">CFG Scale &nbsp;</span>
+                </label>
+                <input :disabled="recalledImageId !== null" v-model="imageParams.options.cfg_scale" class="align-middle w-1/2 md:w-1/4 lg:w-1/12 neutral-border input" type="number" />
+              </div>
+              <div v-if="showAdvancedOptions" class="form-control mt-2 grid grid-cols-12 gap-2">
+                <label class="cursor-pointer row col-span-12">
+                  <span class="ms-2 align-middle">Seed &nbsp;</span>
+                </label>
+                <input :disabled="recalledImageId !== null" v-model="imageParams.options.seed" class="col-span-12 md:col-span-3 align-middle neutral-border input" type="number" />
+                <button :disabled="recalledImageId !== null" @click="onRandomizationClick" class="col-span-12 md:col-span-3 btn btn-secondary">Randomize Seed</button>
+              </div>
+              <div v-if="showAdvancedOptions && (imageParams.options.subseed !== -1 || imageParams.options.subseed !== null)" class="form-control mt-2 grid grid-cols-12 gap-2">
+                <label class="cursor-pointer row col-span-12">
+                  <span class="ms-2 align-middle">Variation Seed &nbsp;</span>
+                </label>
+                <div class="row">
+                  <input v-model="imageParams.options.subseed" disabled class="align-middle neutral-border input" type="number" />
+                </div>
+              </div>
+              <div v-if="showAdvancedOptions && imageParams.options.subseed_strength !== null" class="form-control mt-2 mb-2 grid grid-cols-12 gap-2">
+                <label class="cursor-pointer row col-span-12">
+                  <span class="ms-2 align-middle">Variation Strength &nbsp;</span>
+                </label>
+                <div class="row">
+                  <input v-model="imageParams.options.subseed_strength" disabled class="align-middle neutral-border input" type="number" />
+                </div>
+              </div>
+              <span v-if="showAdvancedOptions && recalledImageId !== null && (imageParams.options.subseed !== -1 || imageParams.options.subseed_strength !== null)" class="text-sm mt-8">Note: Clear the recalled image to remove the above Variation settings.</span>
+            </div>
+          </div>
+        </div>
+        <div class="mt-5">
+          <div class="generated-image-container border-2 border-opacity-90 border-zinc-700 cornered h-full">
+            <span class="label ms-2">Results</span>
+            <!--suppress HtmlUnknownTag -->
+            <!--              <div class="pl-2 pr-8 m-3 w-full">-->
+            <div class="mx-auto max-w-3xl max-h-[60vh] overflow-auto p-2">
+              <img v-if="lastJob && (lastJob.status === 'completed' || lastJob.status === 'in_progress')" id="job-image" @click="openFullscreenPreview = true" :src="getImageForJob" alt="Generated Image" class="w-full h-auto object-contain rounded-lg drop-shadow-lg" />
+            </div>
+            <!-- DaisyUI Modal for full view -->
+            <div v-if="openFullscreenPreview" @click.self="openFullscreenPreview = false" class="fixed inset-0 flex items-center justify-center bg-base-200 bg-opacity-50 z-10 backdrop-blur-lg">
+              <div class="modal-content rounded-lg w-fit mx-4 drop-shadow-lg">
+                <p class="text-center font-bold m-2">Click image (or outside of image) to dismiss</p>
+                <img
+                    class="max-w-full max-h-[75vh] object-contain ml-auto mr-auto rounded-xl drop-shadow-xl"
+                    @click="openFullscreenPreview = false"
+                    :src="getImageForJob"
+                    alt="Generated Image"/>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- "Right" side of page -->
+      <div class="col-span-12 md:col-span-3">
+        <div class="generated-image-metadata-container pt-0 m-3 md:pt-10">
+          <div class="form-control cornered" :class="{'glow': (lastJob && lastJob.status === 'completed')}">
+            <p class="mt-2 text-center w-full">Post-processing</p>
+            <div class="m-3">
+              <button :disabled="isWorking || !lastJob || lastJob.status !== 'completed'" @click="saveLastJobImage" class="btn btn-success w-full relative forced-glow"><oh-vue-icon animation="float" class="size-6" name="fa-download"/>&nbsp;Download Image</button>
+              <button :disabled="isWorking || !lastJob || lastJob.status !== 'completed'" @click="copyImageLink" class="btn btn-info w-full mt-2 relative"><oh-vue-icon class="size-7" animation="wrench" name="hi-clipboard-copy"/>&nbsp;Copy Image Link</button>
+              <button v-if="!isDeletePending" :disabled="isWorking || !lastJob || lastJob.status !== 'completed'" @click="onDeleteClick" class="btn btn-error w-full mt-2 relative"><oh-vue-icon class="size-7" name="md-deleteforever"/>&nbsp; Delete Image</button>
+              <button v-else :disabled="isWorking || !lastJob || lastJob.status !== 'completed'" @click="onDeleteClick" class="btn btn-error w-full mt-2 relative"><oh-vue-icon class="size-7" name="md-deleteforever"/><strong>&nbsp;Click To Confirm</strong></button>
+              <!--            <button v-if="!isImg2Img" :disabled="!lastJob || lastJob.status !== 'completed'" @click="recallLastJob" class="btn btn-primary w-full mt-2 relative"><oh-vue-icon class="size-6" animation="spin" name="md-replaycirclefilled"/>&nbsp; Recall Parameters</button>-->
+              <button v-if="settings.getSetting('shareToCivitAI') === true" :disabled="isWorking || !lastJob || lastJob.status !== 'completed'" @click="shareToCivitAI" class="btn btn-primary w-full mt-2 relative glow-hover"><oh-vue-icon class="size-6" name="ri-share-box-fill"/>Share to CivitAI</button>
+              <button v-if="!img2imgParams.inpainting" :disabled="isWorking || !lastJob || lastJob.status !== 'completed'" @click="onVariationClick(0.3)" class="btn btn-accent w-full mt-2 relative glow-hover"><oh-vue-icon class="size-6" animation="pulse" name="gi-perspective-dice-six-faces-random"/>&nbsp; Variation (Subtle)</button>
+              <button v-if="!img2imgParams.inpainting" :disabled="isWorking || !lastJob || lastJob.status !== 'completed'" @click="onVariationClick(0.7)" class="btn btn-accent w-full mt-2 relative glow-hover"><oh-vue-icon class="size-6" animation="pulse" name="gi-perspective-dice-six-faces-random"/>&nbsp; Variation (Strong)</button>
+              <button v-if="!isImg2Img" :disabled="isWorking || !lastJob || lastJob.status !== 'completed' || !isEligibleForUpscale" @click="onUpscaleClick" class="btn btn-secondary w-full mt-2 relative forced-glow"><oh-vue-icon class="size-6" animation="pulse" name="fa-angle-double-up"/>&nbsp;Recall & Upscale 2x</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
-    <div v-if="isImg2Img" class="mt-5" id="img2img-inpainting">
-      <div class="form-control border border-opacity-50 border-gray-500 cornered">
-        <span class="label ms-2">Inpainting</span>
-        <div class="m-3">
-          <label class="cursor-pointer">
-            <input v-model="img2imgParams.inpainting" class="align-middle checkbox checkbox-secondary" type="checkbox" />
-            <span class="ms-2 align-middle">Enable Inpainting?</span>
-            <span class="ms-2 align-middle text-warning italic">Experimental - Not suitable for mobile!</span>
-          </label>
-          <span class="label mt-2">Inpainting is a technique to select parts of an image for replacement. This can be useful for replacing unwanted objects or artifacts from an image.</span>
-          <button v-if="img2imgParams.inpainting" @click="getMaskFromCanvas" class="m-3 btn btn-info">Get Mask</button>
-          <canvas v-show="img2imgParams.inpainting" ref="inpaintingCanvas" class="m-3 border border-opacity-50 border-gray-500 cornered"></canvas>
-        </div>
-      </div>
-    </div>
-    <div class="mt-5 grid grid-cols-12 gap-4">
-      <div class="form-control border border-opacity-50 col-span-12 md:col-span-9 border-gray-500 cornered">
-        <span v-show="isGenSettingsExpanded" @click="toggleGenSettings" class="label ms-2">Generation Settings</span>
-        <span v-show="!isGenSettingsExpanded" @click="toggleGenSettings" class="label ms-2">Generation Settings (Hidden; Click to expand)</span>
-        <div v-show="recalledImageId !== null && isGenSettingsExpanded" class="m-3">
-          <span>Recalled image ID: {{recalledImageId}}</span>
-          <img v-if="recalledImageId !== null" class="md:w-1/2 xl:w-1/4 rounded-md drop-shadow-lg mt-3" :src="getLinkForJobId(recalledImageId)" alt="Recalled Image" />
-          <div class="grid grid-cols-2 gap-4 xl:w-1/4 mt-3">
-            <button @click="onClearRecallClick" class="btn btn-info">Clear Recall</button>
-            <button @click="onRecallVariationClick(0.3)" :disabled="isWorking" class="btn btn-accent">Vary (Weak)</button>
-            <button @click="onRecallVariationClick(0.7)" :disabled="isWorking" class="btn btn-accent">Vary (Strong)</button>
-            <button @click="onRecallUpscaleClick" :disabled="!isRecalledImageEligibleForUpscale || isWorking" class="btn btn-secondary">Upscale 2x</button>
-          </div>
-        </div>
-        <div v-show="recalledImageId === null && isGenSettingsExpanded" class="m-3">
-          <span>You do not currently have an image recalled. Enter an Image ID below to recall:</span><br/>
-          <input v-model="recallTextEntry" type="text" class="mt-4 input input-md input-primary"/>
-          <button :disabled="isWorking || !recallTextEntry" class="ml-1 mb-2 btn btn-primary" @click="onRecallClick">Recall</button><br/>
-          <span v-if="recallEntryFailed" class="text-sm text-error">The specified Image ID could not be recalled. The image may not exist, or Navigator encountered an issue attempting to check the metadata.</span>
-          <span v-if="!recallEntryFailed" class="text-sm text-gray-500 italic">Note: Upon a successful recall, any current generation parameters will be overwritten.</span>
-        </div>
-        <div v-show="isGenSettingsExpanded" class="m-3">
-          <div>
-            <label class="label">Category</label>
-            <CategorySelect :category-id="imageParams.categoryId" @onCategorySelected="onCategorySelected" allow-modify="true" />
-            <label v-if="imageParams.categoryId !== null" class="label">This image will be categorized under: {{getCategoryName(imageParams.categoryId)}}</label>
-            <label v-else class="label">This image will not be categorized.</label>
-          </div>
-          <div class="form-control">
-            <label class="label">Target Width</label>
-            <div class="grid grid-cols-12 gap-4">
-              <input disabled v-model="imageParams.width" type="range" :class="rangeColorClasses" class="col-span-8 md:col-span-10 range" min="64" max="4096" />
-              <input :disabled="recalledImageId !== null" v-model="imageParams.width" type="number" class="col-span-4 md:col-span-2  md:w-3/4 input input-primary" @blur="validateImageSizeParams" />
-            </div>
-          </div>
-          <div class="form-control pb-3">
-            <label class="label">Target Height</label>
-            <div class="grid grid-cols-12 gap-4">
-              <input disabled v-model="imageParams.height" type="range" :class="rangeColorClasses" class="col-span-8 md:col-span-10 range" min="64" max="4096" />
-              <input :disabled="recalledImageId !== null" v-model="imageParams.height" type="number" class="col-span-4 md:col-span-2 md:w-3/4 input input-primary" @blur="validateImageSizeParams" />
-            </div>
-            <span v-if="!isUsingDeviceResolution && !doesSizeExceedLimit && !isImg2Img" class="text-sm text-success cursor-pointer mt-3" @click="applyScreenResolution">Looking to make a wallpaper? Click here to apply half of your device's screen resolution.</span>
-            <span v-if="!isUsingDeviceResolution && !doesSizeExceedLimit && !isImg2Img" class="text-sm text-success cursor-pointer mt-3 mb-3" @click="applyScreenResolution">(It can then be upscaled to the full resolution)</span>
-            <span v-if="doesSizeRequireUpscale && !doesSizeExceedLimit"><em>Note: Due to the chosen size, your image will generate at half-resolution and will be upscaled to the full resolution.</em></span>
-            <span class="text-error" v-if="doesSizeExceedLimit"><em>Error: The chosen size exceeds the maximum size, please choose a lower resolution.</em></span>
-          </div>
-          <div class="form-control">
-            <label class="label">Aspect Ratio/Size Preview</label>
-            <div class="preview-box-container mb-5">
-              <SizePreviewBox :height="imageParams.height" :width="imageParams.width" />
-            </div>
-          </div>
-          <div class="form-control">
-            <label class="mb-2">
-              <span class="ms-2">Image Model</span>
-            </label>
-            <select :disabled="recalledImageId !== null" id="model-selector" v-model="imageParams.options.model" class="select neutral-border mb-2">
-              <option v-for="model in availableModels" :value="model" :key="model.model_name">{{model.friendly_name ? model.friendly_name : model.model_name}}</option>
-            </select>
-          </div>
-          <div class="form-control">
-            <label class="cursor-pointer mb-2 mt-2">
-              <input type="checkbox" :disabled="recalledImageId !== null" v-model="imageParams.options.image_enhancements" class="checkbox checkbox-primary align-middle">
-              <span class="ms-2">Enable Image Enhancements?</span>
-            </label>
-          </div>
-          <div class="form-control mt-2 mb-2">
-            <label class="cursor-pointer">
-              <input v-model="showAdvancedOptions" class="align-middle checkbox checkbox-secondary" type="checkbox" />
-              <span class="ms-2 align-middle">Show Advanced Options?</span>
-            </label>
-          </div>
-          <div v-if="showAdvancedOptions" class="form-control">
-            <label class="mb-2">
-              <span class="ms-2">Sampler</span>
-            </label>
-            <select :disabled="recalledImageId !== null" v-model="imageParams.options.sampler" class="select neutral-border mb-2">
-              <option v-for="sampler in availableSamplers" :value="sampler" :key="sampler.name">{{sampler.name}}</option>
-            </select>
-          </div>
-          <div v-if="showAdvancedOptions" class="form-control">
-            <label class="mb-2">
-              <span class="ms-2">Scheduler</span>
-            </label>
-            <select :disabled="recalledImageId !== null" v-model="imageParams.options.scheduler" class="select neutral-border mb-2">
-              <option v-for="scheduler in availableSchedulers" :value="scheduler" :key="scheduler.name">{{scheduler.label}}</option>
-            </select>
-          </div>
-          <div v-if="showAdvancedOptions" class="form-control">
-            <label class="cursor-pointer mb-2">
-              <span class="ms-2">Steps</span>
-            </label>
-            <input :disabled="recalledImageId !== null" v-model="imageParams.options.steps" class="input w-1/2 md:w-1/4 lg:w-1/12 neutral-border" type="number" min="1" max="75" />
-          </div>
-          <div v-if="showAdvancedOptions" class="form-control mt-2">
-            <label class="cursor-pointer mb-2">
-              <span class="ms-2 align-middle">CFG Scale &nbsp;</span>
-            </label>
-            <input :disabled="recalledImageId !== null" v-model="imageParams.options.cfg_scale" class="align-middle w-1/2 md:w-1/4 lg:w-1/12 neutral-border input" type="number" />
-          </div>
-          <div v-if="showAdvancedOptions" class="form-control mt-2 grid grid-cols-12 gap-2">
-            <label class="cursor-pointer row col-span-12">
-              <span class="ms-2 align-middle">Seed &nbsp;</span>
-            </label>
-            <input :disabled="recalledImageId !== null" v-model="imageParams.options.seed" class="col-span-12 md:col-span-3 align-middle neutral-border input" type="number" />
-            <button :disabled="recalledImageId !== null" @click="imageParams.options.seed = -1" class="col-span-12 md:col-span-3 btn btn-secondary">Randomize Seed</button>
-          </div>
-          <div v-if="showAdvancedOptions && imageParams.options.subseed !== -1" class="form-control mt-2 grid grid-cols-12 gap-2">
-            <label class="cursor-pointer row col-span-12">
-              <span class="ms-2 align-middle">Variation Seed &nbsp;</span>
-            </label>
-            <div class="row">
-              <input v-model="imageParams.options.subseed" disabled class="align-middle neutral-border input" type="number" />
-            </div>
-          </div>
-          <div v-if="showAdvancedOptions && imageParams.options.subseed_strength !== null" class="form-control mt-2 mb-2 grid grid-cols-12 gap-2">
-            <label class="cursor-pointer row col-span-12">
-              <span class="ms-2 align-middle">Variation Strength &nbsp;</span>
-            </label>
-            <div class="row">
-              <input v-model="imageParams.options.subseed_strength" disabled class="align-middle neutral-border input" type="number" />
-            </div>
-          </div>
-          <span v-if="showAdvancedOptions && recalledImageId !== null && (imageParams.options.subseed !== -1 || imageParams.options.subseed_strength !== null)" class="text-sm mt-8">Note: Clear the recalled image to remove the above Variation settings.</span>
-        </div>
-      </div>
-    </div>
-    <div class="grid grid-cols-12 gap-4 mt-5">
-      <div class="generated-image-container col-span-12 lg:col-span-9">
-        <label class="form-control border border-opacity-50 border-gray-500 cornered">
-          <span class="label ms-2">Results</span>
-          <!--suppress HtmlUnknownTag -->
-          <div class="pl-2 pr-8 m-3 w-full">
-            <img v-if="lastJob && (lastJob.status === 'completed' || lastJob.status === 'in_progress')" id="job-image" :src="getImageForJob" alt="Generated Image" class="w-full rounded-lg drop-shadow-lg" />
-          </div>
-        </label>
-      </div>
-      <div class="generated-image-metadata-container col-span-12 lg:col-span-3 pt-0 m-3 md:pt-10">
-        <div class="form-control border border-opacity-50 border-gray-500 cornered">
-          <p class="label ms-2 ml-auto mr-auto">Post-processing</p>
-          <div class="m-3">
-            <button :disabled="!lastJob || lastJob.status !== 'completed'" @click="saveLastJobImage" class="btn btn-success w-full relative"><oh-vue-icon animation="float" class="size-6" name="fa-download"/>&nbsp;Download Image</button>
-            <button :disabled="!lastJob || lastJob.status !== 'completed'" @click="copyImageLink" class="btn btn-info w-full mt-2 relative"><oh-vue-icon class="size-7" animation="wrench" name="hi-clipboard-copy"/>&nbsp;Copy Image Link</button>
-            <button v-if="!isDeletePending" :disabled="!lastJob || lastJob.status !== 'completed'" @click="onDeleteClick" class="btn btn-error w-full mt-2 relative"><oh-vue-icon class="size-7" name="md-deleteforever"/>&nbsp; Delete Image</button>
-            <button v-else :disabled="!lastJob || lastJob.status !== 'completed'" @click="onDeleteClick" class="btn btn-error w-full mt-2 relative"><oh-vue-icon class="size-7" name="md-deleteforever"/><strong>&nbsp;Click To Confirm</strong></button>
-<!--            <button v-if="!isImg2Img" :disabled="!lastJob || lastJob.status !== 'completed'" @click="recallLastJob" class="btn btn-primary w-full mt-2 relative"><oh-vue-icon class="size-6" animation="spin" name="md-replaycirclefilled"/>&nbsp; Recall Parameters</button>-->
-            <button v-if="settings.getSetting('shareToCivitAI') === true" :disabled="!lastJob || lastJob.status !== 'completed'" @click="shareToCivitAI" class="btn btn-primary w-full mt-2 relative"><oh-vue-icon class="size-6" name="ri-share-box-fill"/>Share to CivitAI</button>
-            <button v-if="!img2imgParams.inpainting" :disabled="!lastJob || lastJob.status !== 'completed'" @click="onVariationClick(0.3)" class="btn btn-accent w-full mt-2 relative"><oh-vue-icon class="size-6" animation="pulse" name="gi-perspective-dice-six-faces-random"/>&nbsp; Variation (Subtle)</button>
-            <button v-if="!img2imgParams.inpainting" :disabled="!lastJob || lastJob.status !== 'completed'" @click="onVariationClick(0.7)" class="btn btn-accent w-full mt-2 relative"><oh-vue-icon class="size-6" animation="pulse" name="gi-perspective-dice-six-faces-random"/>&nbsp; Variation (Strong)</button>
-            <button v-if="!isImg2Img" :disabled="!lastJob || lastJob.status !== 'completed' || !isEligibleForUpscale" @click="onUpscaleClick" class="btn btn-secondary w-full mt-2 relative"><oh-vue-icon class="size-6" animation="pulse" name="fa-angle-double-up"/>&nbsp;Recall & Upscale 2x</button>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div v-if="showTipsModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+    <div v-if="showTipsModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
       <div class="modal-content bg-neutral-700 p-5 rounded-lg w-5/6 md:w-3/4 mx-4">
         <h2 class="text-xl font-bold mb-4">How to Construct a Prompt</h2>
         <h3 class="text-lg font-bold mb-2">Be Specific</h3>
@@ -1409,5 +1488,30 @@ input[type="number"]::-webkit-outer-spin-button {
 input[type=number] {
   -moz-appearance:textfield;
   appearance: textfield;
+}
+
+textarea, textarea::placeholder {
+  resize: block;
+  color: #a5efa5;
+}
+
+textarea:disabled {
+  color: #597259;
+}
+
+textarea::placeholder {
+  font-size: 1.2em;
+}
+
+#negativePrompt {
+  font-size: unset !important;
+  color: #f6c7c7;
+  opacity: 0.7;
+}
+
+#negativePrompt::placeholder {
+  font-size: 0.9rem;
+  color: #ffd1d1;
+  opacity: 0.8;
 }
 </style>
