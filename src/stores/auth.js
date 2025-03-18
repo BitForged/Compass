@@ -13,21 +13,25 @@ export const useAuthStore = defineStore('auth', () => {
 
     async function login(code) {
         // Use the code to hit the authorization endpoint and get back a JWT
-        let errored = false
-        let resp = await requestLoginToken(code).catch((err) => {
+        try {
+            let resp = await requestLoginToken(code)
+            user.value = resp.data.user
+            token.value = resp.data.token
+            role.value = resp.data.role
+            console.log(resp.data)
+            localStorage.setItem("token", resp.data.token)
+            localStorage.setItem("user", JSON.stringify(resp.data.user))
+            useAlertStore().addAlert("Successfully logged in!", "success")
+        } catch (err) {
             console.error(err)
-            useAlertStore().addAlert("Failed to log in! Please try again later.", "error")
-            errored = true
-        });
-        if(errored) {
-            return
+            if(err.response && err.response.data && err.response.data.error_code === "DEMO_USER_DISABLED") {
+                useAlertStore().addAlert("The demo user is not available on this instance, please login with a Discord account.", "error")
+            } else if(err.response && err.response.data && err.response.data.error_code === "USER_DISABLED") {
+                useAlertStore().addAlert("Your account is disabled, please contact an administrator.", "error")
+            } else {
+                useAlertStore().addAlert("Failed to log in! Please try again later.", "error")
+            }
         }
-        user.value = resp.data.user
-        token.value = resp.data.token
-        console.log(resp.data)
-        localStorage.setItem("token", resp.data.token)
-        localStorage.setItem("user", JSON.stringify(resp.data.user))
-        useAlertStore().addAlert("Successfully logged in!", "success")
     }
 
     function logout(forced = false) {
@@ -36,7 +40,7 @@ export const useAuthStore = defineStore('auth', () => {
         localStorage.removeItem("token")
         localStorage.removeItem("user")
         if(forced) {
-            useAlertStore().addAlert("You have been logged out due to your session being invalid.", "warning")
+            useAlertStore().addAlert("You have been logged out due to your session expiring.", "warning")
         }
         this.$router.push("/").then(() => {});
     }
@@ -47,8 +51,14 @@ export const useAuthStore = defineStore('auth', () => {
         }
         requestUser().then((res) => {
             role.value = res.data.user.role
-        }).catch(() => {
-            logout(true)
+        }).catch((err) => {
+            console.log("Failed to verify token", err);
+            if(err.response && (err.response.status === 401 || err.response.status === 403)) {
+                logout(true)
+            } else {
+                useAlertStore().addAlert("Failed to verify your session - Navigator and generation functions are unavailable. Please try again later.", "warning")
+                this.$router.push("/").then(() => {});
+            }
         })
 
     }
@@ -58,7 +68,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     function getAvatarUrl() {
-        if(user.value === null) {
+        if(user.value === null || user.value.avatar === null) {
             return ""
         }
         return `https://cdn.discordapp.com/avatars/${user.value.id}/${user.value.avatar}.png`
