@@ -15,8 +15,8 @@ export default defineConfig({
               name: 'BitJourney Compass',
               short_name: 'Compass',
               description: 'Compass is an application for interacting with the BitJourney service',
-              theme_color: '#1c1917',
-              background_color: '#1c1917',
+              theme_color: '#121217',
+              background_color: '#121217',
               icons: [
                   {
                       src: 'pwa-64x64.png',
