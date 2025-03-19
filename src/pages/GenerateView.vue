@@ -1386,7 +1386,7 @@ function adjustHeight(element){
             <span class="label ms-2">Results</span>
             <!--suppress HtmlUnknownTag -->
             <!--              <div class="pl-2 pr-8 m-3 w-full">-->
-            <div class="mx-auto max-w-3xl max-h-[60vh] overflow-auto p-2">
+            <div class="mx-auto max-w-3xl md:max-h-[60vh] overflow-auto p-2">
               <img v-if="lastJob && (lastJob.status === 'completed' || lastJob.status === 'in_progress')" id="job-image" @click="openFullscreenPreview = true" :src="getImageForJob" alt="Generated Image" class="w-full h-auto object-contain rounded-lg drop-shadow-lg" />
             </div>
             <!-- DaisyUI Modal for full view -->
