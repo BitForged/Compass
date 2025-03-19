@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from "vue";
+import {ref, onMounted, onUnmounted, toRaw} from "vue";
 
 const images = ref([]);
 const basePath = "/example-images";
@@ -25,9 +25,12 @@ const stopAutoplay = () => {
 onMounted(async () => {
   try {
     const response = await fetch(`${basePath}/image-manifest.json`);
-    images.value = await response.json();
+    let manifest = await response.json();
     // Shuffle the array
-    images.value = images.value.sort(() => Math.random() - 0.5);
+    manifest = manifest.sort(() => Math.random() - 0.5);
+    // Take only the first 5 and put them into the `images` value (the user probably doesn't need to see all of them)
+    images.value = manifest.slice(0, 5);
+    console.log("Image selection completed: ", toRaw(images.value))
     if (images.value.length) startAutoplay();
   } catch (error) {
     console.error("Failed to load images:", error);
