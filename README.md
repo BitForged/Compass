@@ -117,14 +117,19 @@ There is an example Nginx config provided in the `examples` folder. You should r
 
 This config assumes that you are going to reverse proxy from a different web server (or just a different Nginx config). It should be adjustable to use HTTPs, and a utility like Certbot can likely do it for you automatically.
 
-Alternatively, you can also use the included docker files from the `docker` folder to setup Compass. Make sure to edit the `./docker/compass/compass_env` file using the guidelines from above before building the container, however.
+Alternatively, you can use the `ghcr.io/bitforged/compass:main` docker image created by this repository's GitHub Action. 
 
-```shell
-docker compose build compass
-docker compose up -d compass
+Checkout the `docker/compose.yaml` file to get quickly up and running via Docker Compose. If you're into building your own container images, you'll find instructions for that too!
+
+You'll need to still pass the above environmental variables above, but with the `COMPASS_APP` prefix instead of `VITE_`, so:
+
+```dotenv
+COMPASS_APP_API_BASE
+COMPASS_APP_RT_API_BASE
+COMPASS_APP_BASE_URL
+COMPASS_APP_DISCORD_CLIENT_ID
+COMPASS_APP_DISCORD_REDIRECT_URI
 ```
-
-(Note that if you change any of the variables in `compass_env`, you need to rebuild the container with `docker compose build --no-cache compass`)
 
 This should start Compass on port `8888`, bound to localhost. From there, you can either reverse proxy it using your favorite web server or connect to it locally. A reverse proxy is recommended for public usage, but otherwise just remove `127.0.0.1:` from the port binding in `compose.yaml`.
 

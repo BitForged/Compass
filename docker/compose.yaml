@@ -1,7 +1,15 @@
 services:
   compass:
-    build:
-      context: ./compass
+    image: ghcr.io/bitforged/compass:main
+    # Uncomment the below (and comment out the image line above) to build your own container image
+    #build:
+    #  context: ../.
     restart: unless-stopped
+    environment:
+      - COMPASS_APP_API_BASE=
+      - COMPASS_APP_RT_API_BASE=
+      - COMPASS_APP_BASE_URL=
+      - COMPASS_APP_DISCORD_CLIENT_ID=
+      - COMPASS_APP_DISCORD_REDIRECT_URI=
     ports:
       - "127.0.0.1:8888:80"
