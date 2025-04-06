@@ -1391,17 +1391,18 @@ function adjustHeight(element){
             <div class="mx-auto max-w-3xl md:max-h-[60vh] overflow-auto p-2">
               <img v-if="lastJob && (lastJob.status === 'completed' || lastJob.status === 'in_progress')" id="job-image" @click="openFullscreenPreview = true" :src="getImageForJob" alt="Generated Image" class="w-full h-auto object-contain rounded-lg drop-shadow-lg" />
             </div>
-            <!-- DaisyUI Modal for full view -->
-            <div v-if="openFullscreenPreview" @click.self="openFullscreenPreview = false" class="fixed inset-0 flex items-center justify-center bg-base-200 bg-opacity-50 z-10 backdrop-blur-lg">
-              <div class="modal-content rounded-lg w-fit mx-4 drop-shadow-lg">
-                <p class="text-center font-bold m-2">Click image (or outside of image) to dismiss</p>
-                <img
-                    class="max-w-full max-h-[75vh] object-contain ml-auto mr-auto rounded-xl drop-shadow-xl"
-                    @click="openFullscreenPreview = false"
-                    :src="getImageForJob"
-                    alt="Generated Image"/>
+            <transition name="fullview">
+              <div v-show="openFullscreenPreview" @click.self="openFullscreenPreview = false" class="fixed inset-0 flex items-center justify-center bg-base-200 bg-opacity-50 z-10 backdrop-blur-lg">
+                <div class="modal-content rounded-lg w-fit mx-4 drop-shadow-lg">
+                  <p class="text-center font-bold m-2">Click image (or outside of image) to dismiss</p>
+                  <img
+                      class="max-w-full max-h-[75vh] object-contain ml-auto mr-auto rounded-xl drop-shadow-xl"
+                      @click="openFullscreenPreview = false"
+                      :src="getImageForJob"
+                      alt="Generated Image"/>
+                </div>
               </div>
-            </div>
+            </transition>
           </div>
         </div>
       </div>
@@ -1546,5 +1547,17 @@ textarea::placeholder {
 .zoom-enter-to, .zoom-leave-from {
   opacity: 1;
   transform: scale(1);
+}
+
+.fullview-enter-active, .fullview-leave-active {
+  transition: all 0.2s ease-in-out;
+}
+.fullview-enter-from, .fullview-leave-to {
+  opacity: 0;
+  transform: scale(0.8) translateY(1rem);
+}
+.fullview-enter-to, .fullview-leave-from {
+  opacity: 1;
+  transform: scale(1) translateY(0);
 }
 </style>
