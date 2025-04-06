@@ -88,30 +88,50 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="entry size-full align-middle p-2 grid grid-cols-12 gap-1 rounded-xl shadow-md bg-neutral-800 hover:shadow-lg transition-shadow">
-    <div v-if="!isEditing" class="flex items-center col-span-8 xl:col-span-10">
-      <!--suppress JSUnresolvedReference -->
-      <p class="rounded-full px-3 py-1 bg-gray-700 text-white">{{category.name}}</p>
+  <div class="entry w-full min-w-0 align-middle p-2 grid grid-cols-12 gap-1 rounded-xl shadow-md bg-neutral-800 hover:shadow-lg transition-shadow">
+    <!-- Category Name / Edit Field -->
+    <div v-if="!isEditing" class="flex items-center col-span-8 xl:col-span-10 w-full">
+      <p class="rounded-full px-3 py-1 bg-gray-700 text-white truncate">{{ category.name }}</p>
     </div>
-    <div v-else class="flex items-center col-span-8 xl:col-span-10">
-      <oh-vue-icon v-if="isNew" name="md-fibernew" fill="#ffd700" scale="2" class="mr-2"/>
-      <input ref="nameField" v-model="editedName" type="text" class="align-middle input input-primary input-bordered w-full"
-             @keyup.enter="onEditSubmit(true)" @keyup.esc="onEditSubmit(false)"/>
+    <div v-else class="flex items-center col-span-8 xl:col-span-10 w-full">
+      <oh-vue-icon v-if="isNew" name="md-fibernew" fill="#ffd700" scale="2" class="mr-2" />
+      <input
+          ref="nameField"
+          v-model="editedName"
+          type="text"
+          class="align-middle input input-primary input-bordered w-full"
+          @keyup.enter="onEditSubmit(true)"
+          @keyup.esc="onEditSubmit(false)"
+      />
     </div>
-    <div v-if="!isEditing" class="flex items-center justify-center w-fit gap-1">
-      <button class="btn btn-circle btn-primary col-span-2 xl:col-span-1" @click="isEditing = true"><oh-vue-icon name="fa-edit" /></button>
-      <button v-if="!isDeleting" class="btn btn-circle btn-error col-span-2 xl:col-span-1" @click="onDelete"><oh-vue-icon name="md-deleteforever"/></button>
-      <button v-else class="btn btn-circle btn-error-darker col-span-2 xl:col-span-1" @click="onDelete">
-        <oh-vue-icon name="fa-question" animation="pulse"/>
+
+    <!-- Action buttons: View Mode -->
+    <div v-if="!isEditing" class="flex items-center justify-end col-span-4 xl:col-span-2 gap-1 w-full">
+      <button class="btn btn-circle btn-primary" @click="isEditing = true">
+        <oh-vue-icon name="fa-edit" />
+      </button>
+      <button v-if="!isDeleting" class="btn btn-circle btn-error" @click="onDelete">
+        <oh-vue-icon name="md-deleteforever" />
+      </button>
+      <button v-else class="btn btn-circle btn-error-darker relative" @click="onDelete">
+        <oh-vue-icon name="fa-question" animation="pulse" />
         <!-- Progress Overlay -->
         <!--suppress HtmlUnknownTag -->
-        <div class="absolute top-0 left-0 h-full bg-white/50" :style="{ width: `${deleteProgress}%`, transition: 'width 0.5s linear'}"></div>
+        <div class="absolute top-0 left-0 h-full bg-white/50"
+            :style="{ width: `${deleteProgress}%`, transition: 'width 0.5s linear' }"></div>
       </button>
     </div>
-    <div v-else class="flex items-center justify-center w-fit gap-1">
-      <button class="btn btn-circle btn-success col-span-2 xl:col-span-1" @click="onEditSubmit(true)"><oh-vue-icon name="fa-check"/></button>
-      <button v-if="!isNew" class="btn btn-circle btn-warning col-span-2 xl:col-span-1" @click="onEditSubmit(false)"><oh-vue-icon name="fa-times"/></button>
-      <button v-else class="btn btn-circle btn-error col-span-2 xl:col-span-1" @click="onEditSubmit(false)"><oh-vue-icon name="fa-times"/></button>
+
+    <!-- Action buttons: Edit Mode -->
+    <div v-else class="flex flex-wrap items-center justify-end col-span-4 xl:col-span-2 gap-2 w-full">
+      <button class="btn btn-circle btn-success" @click="onEditSubmit(true)">
+        <oh-vue-icon name="fa-check" />
+      </button>
+      <button
+          :class="isNew ? 'btn btn-circle btn-error' : 'btn btn-circle btn-warning'"
+          @click="onEditSubmit(false)">
+        <oh-vue-icon name="fa-times" />
+      </button>
     </div>
   </div>
 </template>
