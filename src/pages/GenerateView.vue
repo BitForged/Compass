@@ -703,7 +703,7 @@ const recallJobParameters = (imageId, cb, shouldSetRecall = true, onRecallFail) 
     const subseed = params["Variation seed"];
     const subseedStrength = params["Variation seed strength"];
 
-    if(subseed !== null && subseed !== "") {
+    if(subseed !== undefined && subseed !== "") {
       imageParams.value.options.subseed = subseed;
       console.log("Subseed found", subseed);
       if(subseedStrength) {
@@ -1287,14 +1287,14 @@ function adjustHeight(element){
               <div class="form-control">
                 <label class="label">Target Width</label>
                 <div class="grid grid-cols-12 gap-4">
-                  <input disabled v-model="imageParams.width" type="range" :class="rangeColorClasses" class="col-span-8 md:col-span-10 range" min="64" max="4096" />
+                  <input :disabled="recalledImageId !== null" v-model="imageParams.width" type="range" :class="rangeColorClasses" class="col-span-8 md:col-span-10 range" step="64" min="64" max="4096" />
                   <input :disabled="recalledImageId !== null" v-model="imageParams.width" type="number" class="col-span-4 md:col-span-2  md:w-3/4 input input-primary" @blur="validateImageSizeParams" />
                 </div>
               </div>
               <div class="form-control pb-3">
                 <label class="label">Target Height</label>
                 <div class="grid grid-cols-12 gap-4">
-                  <input disabled v-model="imageParams.height" type="range" :class="rangeColorClasses" class="col-span-8 md:col-span-10 range" min="64" max="4096" />
+                  <input :disabled="recalledImageId !== null" v-model="imageParams.height" type="range" :class="rangeColorClasses" class="col-span-8 md:col-span-10 range" step="64" min="64" max="4096" />
                   <input :disabled="recalledImageId !== null" v-model="imageParams.height" type="number" class="col-span-4 md:col-span-2 md:w-3/4 input input-primary" @blur="validateImageSizeParams" />
                 </div>
                 <span v-if="!isUsingDeviceResolution && !doesSizeExceedLimit && !isImg2Img" class="text-sm text-success cursor-pointer mt-3" @click="applyScreenResolution">Looking to make a wallpaper? Click here to apply half of your device's screen resolution.</span>
@@ -1503,6 +1503,17 @@ input[type="number"]::-webkit-outer-spin-button {
 input[type=number] {
   -moz-appearance:textfield;
   appearance: textfield;
+}
+
+input[type=range] {
+  pointer-events: none;
+}
+
+input[type=range]::-webkit-slider-thumb {
+  pointer-events: auto;
+}
+input[type=range]::-moz-range-thumb {
+  pointer-events: auto;
 }
 
 textarea, textarea::placeholder {
