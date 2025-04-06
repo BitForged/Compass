@@ -17,6 +17,7 @@ import {deleteImage} from "@/services/UserService";
 import CategorySelect from "@/components/CategorySelect.vue";
 import {useSettingsStore} from "@/stores/settings";
 import LoraSelector from "@/components/generate/LoraSelector.vue";
+import SettingsView from "./SettingsView.vue";
 
 const router = useRouter();
 
@@ -1157,6 +1158,7 @@ const positivePromptArea = ref(null);
 const negativePromptArea = ref(null);
 
 const openFullscreenPreview = ref(false);
+const openSettingsEmbed = ref(false);
 
 const handleEscape = (event) => {
   if (event.key === 'Escape' && openFullscreenPreview.value) {
@@ -1419,6 +1421,7 @@ function adjustHeight(element){
               <button v-if="!img2imgParams.inpainting" :disabled="isWorking || !lastJob || lastJob.status !== 'completed'" @click="onVariationClick(0.3)" class="btn btn-accent w-full mt-2 relative glow-hover"><oh-vue-icon class="size-6" animation="pulse" name="gi-perspective-dice-six-faces-random"/>&nbsp; Variation (Subtle)</button>
               <button v-if="!img2imgParams.inpainting" :disabled="isWorking || !lastJob || lastJob.status !== 'completed'" @click="onVariationClick(0.7)" class="btn btn-accent w-full mt-2 relative glow-hover"><oh-vue-icon class="size-6" animation="pulse" name="gi-perspective-dice-six-faces-random"/>&nbsp; Variation (Strong)</button>
               <button v-if="!isImg2Img" :disabled="isWorking || !lastJob || lastJob.status !== 'completed' || !isEligibleForUpscale" @click="onUpscaleClick" class="btn btn-secondary w-full mt-2 relative forced-glow"><oh-vue-icon class="size-6" animation="pulse" name="fa-angle-double-up"/>&nbsp;Recall & Upscale 2x</button>
+              <button class="btn btn-ghost btn-outline w-full mt-2 relative" @click="openSettingsEmbed = true"><oh-vue-icon name="io-settings" />&nbsp; Open Settings</button>
             </div>
           </div>
         </div>
@@ -1449,6 +1452,17 @@ function adjustHeight(element){
         <button @click="showTipsModal = false" class="mt-4 btn btn-primary">Close</button>
       </div>
     </div>
+    <transition name="fade">
+      <div v-show="openSettingsEmbed" @click.self="openSettingsEmbed = false" class="fixed inset-0 flex items-center justify-center bg-base-200 bg-opacity-90 z-10 backdrop-blur-lg">
+        <transition name="zoom">
+          <div class="modal-content rounded-lg w-3/4 mx-4 drop-shadow-lg border-2 border-opacity-90 border-zinc-700">
+            <p class="text-center font-bold m-2">Click outside to dismiss</p>
+            <!-- TODO: Make the category-id a ref so that this dialog can be reused for other settings -->
+            <SettingsView :is-embedded="true" :category-id="'image-generation'" />
+          </div>
+        </transition>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -1513,5 +1527,24 @@ textarea::placeholder {
   font-size: 0.9rem;
   color: #ffd1d1;
   opacity: 0.8;
+}
+
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+}
+
+.zoom-enter-active, .zoom-leave-active {
+  transition: all 0.3s ease;
+}
+.zoom-enter-from, .zoom-leave-to {
+  opacity: 0;
+  transform: scale(0.95);
+}
+.zoom-enter-to, .zoom-leave-from {
+  opacity: 1;
+  transform: scale(1);
 }
 </style>

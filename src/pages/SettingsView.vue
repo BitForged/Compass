@@ -11,6 +11,8 @@ const settingsTemplate = shallowRef()
 
 const router = useRouter()
 
+const props = defineProps(['isEmbedded', 'categoryId'])
+
 onMounted(() => {
   settingsCategories.value.push({
     name: "Predefined Prompts",
@@ -35,6 +37,8 @@ onMounted(() => {
   if(router.currentRoute.value.query.category) {
     console.debug("Setting category from query", router.currentRoute.value.query.category);
     setCategory(router.currentRoute.value.query.category);
+  } else if(props.categoryId !== undefined) {
+    setCategory(props.categoryId);
   } else {
     // Navigate to the first available setting category
     setCategory(settingsCategories.value[0].id);
@@ -44,7 +48,9 @@ onMounted(() => {
 const setCategory = async (id) => {
   selectedCategoryId.value = id;
   console.debug("Selected category: ", id);
-  await router.push({query: {category: id}});
+  if(!props.isEmbedded) {
+    await router.push({query: {category: id}});
+  }
   settingsTemplate.value = (
       await import(`@/components/settings/${settingsCategories.value.find((cat) => cat.id === id).template_name}.vue`)
   ).default
