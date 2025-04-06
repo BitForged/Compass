@@ -33,7 +33,7 @@
 }
 
 .glow {
-    animation: glow 1.3s ease-in-out infinite alternate;
+    animation: glow 1.0s ease-in-out infinite alternate;
     box-shadow: 0 0 10px;
 }
 
@@ -74,10 +74,10 @@
 
 @keyframes glow {
     from {
-        box-shadow: 0 0 15px #a6afb7;
+        box-shadow: 0 0 5px #a6afb7;
     }
     to {
-        box-shadow: 0 0 25px #e5e9ea;
+        box-shadow: 0 0 15px #e5e9ea;
     }
 }
 
