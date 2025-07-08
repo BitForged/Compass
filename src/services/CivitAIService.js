@@ -12,15 +12,28 @@ export const ModelTypes = {
 const encodeGetParams = p =>
     Object.entries(p).map(kv => kv.map(encodeURIComponent).join("=")).join("&");
 
+// https://stackoverflow.com/a/32108184 - Quite dumb that this is needed!
+function isEmpty(obj) {
+  for (const prop in obj) {
+    if (Object.hasOwn(obj, prop)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 export function apiForwardRequest({endpoint, query = {}}) {
     const authStore = useAuthStore()
     let url = "";
-    if(query === undefined) {
+    console.debug(`Query: ${JSON.stringify(query)}, Endpoint: ${endpoint}`)
+    if(query === undefined || isEmpty(query)) {
         url = `${import.meta.env.VITE_API_BASE}/3papi/civitai/api-proxy/${endpoint}`
     } else {
         url = `${import.meta.env.VITE_API_BASE}/3papi/civitai/api-proxy/${endpoint}?${encodeGetParams(query)}`
     }
-    console.log(`Using query parameters: ${encodeGetParams(query)}`)
+    console.debug(`Using query parameters: ${encodeGetParams(query)}`)
+    console.debug(url)
     return new Promise((resolve, reject) => {
         axios({
             method: "GET",
