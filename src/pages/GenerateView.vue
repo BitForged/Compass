@@ -5,7 +5,9 @@ import {
   generateImg2Img,
   generateTxt2Img,
   getAvailableModels,
-  getAvailableSamplers, getAvailableSchedulers,
+  getAvailableSamplers,
+  getAvailableSchedulers,
+  getAvailableModules,
   getImageInfo, getLimits, getMetadataForImage, getMyCategories,
   interruptJob, upscaleImageWithHR
 } from "@/services/NavigatorService";
@@ -33,6 +35,7 @@ const imageParams = ref({
     scheduler: {},
     steps: 35,
     cfg_scale: 5.0,
+    distilled_cfg: 3.5,
     seed: -1,
     subseed: -1,
     subseed_strength: null,
@@ -79,6 +82,10 @@ const currentJobId = ref(null);
 const isGenSettingsExpanded = ref(false);
 
 const categories = ref([]);
+
+const allAdditionalModules = ref([]);
+const enabledAdditionalModules = ref([]);
+const selectedAdditionalModule = ref('');
 
 const isImg2Img = computed(() => {
   return router.currentRoute.value.name === "img2img";
@@ -132,6 +139,12 @@ const doesSizeExceedLimit = computed(() => {
   return (imageParams.value.width * imageParams.value.height) > navigatorLimits.value.max_pixels;
 });
 
+const availableAdditionalModules = computed(() => {
+  return allAdditionalModules.value.filter(module => {
+    return !enabledAdditionalModules.value.some(selected => selected.model_name === module.model_name)
+  });
+});
+
 const isImageParamsValid = computed(() => {
   if(doesSizeExceedLimit.value) {
     return false;
@@ -156,6 +169,23 @@ const onCategorySelected = (categoryId) => {
   console.log("Selected category", getCategoryName(categoryId), categoryId);
   imageParams.value.categoryId = categoryId;
 };
+
+const onAddModule = async () => {
+  console.debug("Adding module!");
+  if (!selectedAdditionalModule.value) return;
+
+  const moduleToAdd = allAdditionalModules.value.find(m => m.model_name === selectedAdditionalModule.value);
+  if (moduleToAdd) {
+    console.log("Found module: ", toRaw(moduleToAdd));
+    enabledAdditionalModules.value = [...enabledAdditionalModules.value, moduleToAdd];
+  }
+  await nextTick(); // Needed as otherwise we update the available options too quickly, and the browser DOM vs Vue gets a bit confused (Race condition)
+  selectedAdditionalModule.value = '';
+}
+
+const onRemoveModule = (name) => {
+  enabledAdditionalModules.value = enabledAdditionalModules.value.filter(module => module.model_name !== name);
+}
 
 const isInterruptible = computed(() => {
   return (currentJobId.value !== null);
@@ -260,6 +290,10 @@ const initializeData = async () => {
     }
   })
 
+  await getAvailableModules().then(async (resp) => {
+    allAdditionalModules.value = resp.data;
+  });
+
   try {
     let limitsResp = await getLimits()
     navigatorLimits.value = limitsResp.data;
@@ -295,6 +329,8 @@ const sendJobToNavigator = () => {
       width: imageParams.value.width,
       height: imageParams.value.height,
       cfg_scale: imageParams.value.options.cfg_scale,
+      distilled_cfg: imageParams.value.options.distilled_cfg,
+      modules: enabledAdditionalModules.value.map((m) => m.model_name),
       seed: imageParams.value.options.seed,
       categoryId: imageParams.value.categoryId
     };
@@ -575,6 +611,20 @@ const extractModelNameFromInfo = (infoText) => {
   }
 }
 
+/**
+ * Returns a list of Forge modules given a speciefied info text string
+ * @param {string} info - Represents the "info" text string from Forge
+ * @returns {string[]} Any found modules, concatenated into an array with `.safetensors` appended to the end of each element.
+ */
+const parseModulesFromInfo = (infoText) => {
+  // Example: "... Model hash: e6da438d1a, Model: my-fancy-model, Version: f2.0.1v1.10.1-previous-669-gdfdcbab6, Module 1: ae, Module 2: t5xxl_fp8_e4m3fn_scaled"
+  // This regex finds all keys starting with "Module", and captures the value after the colon.
+  const moduleRegex = /Module \d+:\s*([^,]+)/g;
+  // For each match, we take the first captured group (the value).
+  return Array.from(infoText.matchAll(moduleRegex), match => `${match[1]}.safetensors`);
+}
+
+
 const extractSizeFromInfo = (infoText) => {
   // Regular expression to match the "Size: " pattern followed by the size
   const sizeRegex = /Size: (\d+)x(\d+)/;
@@ -692,6 +742,13 @@ const recallJobParameters = (imageId, cb, shouldSetRecall = true, onRecallFail) 
     } else {
       console.error(`Failed to locate model (${extractedModelName}) from image info, using default model`);
     }
+    let infoModules = parseModulesFromInfo(resp.data.info);
+    infoModules.forEach(m => {
+      let foundModule = availableAdditionalModules.value.find((module) => module.model_name === m)
+      if (foundModule) {
+        enabledAdditionalModules.value.push(foundModule);
+      }
+    })
     imageParams.value.options.sampler = availableSamplers.value.find((sampler) => sampler.name === params.Sampler);
     imageParams.value.options.scheduler = availableSchedulers.value.find((scheduler) => scheduler.label === params["Schedule type"])
     imageParams.value.options.steps = params["Steps"];
@@ -723,6 +780,7 @@ const recallJobParameters = (imageId, cb, shouldSetRecall = true, onRecallFail) 
     isRecalledImageEligibleForUpscale.value = upscaledWidth * upscaledHeight <= navigatorLimits.value.max_pixels;
 
     imageParams.value.options.cfg_scale = params["CFG scale"];
+    imageParams.value.options.distilled_cfg = params.distilled_cfg || params["Distilled CFG Scale"] || 3.5;
     imageParams.value.options.seed = params.Seed;
 
     // Check to see if image enhancements ("FreeU" or "SAG - SelfAttentionGuidance") was applied to the recalled image
@@ -796,6 +854,12 @@ watch(imageParams, (newValue) => {
     imageParams.value.options.cfg_scale = Number(newValue.options.cfg_scale);
   } else {
     imageParams.value.options.cfg_scale = 7.0;
+  }
+
+  if(!isNaN(newValue.options.distilled_cfg)) {
+    imageParams.value.options.distilled_cfg = Number(newValue.options.distilled_cfg);
+  } else {
+    imageParams.value.options.distilled_cfg = 3.5;
   }
 
   if(!isNaN(newValue.options.steps)) {
@@ -1317,6 +1381,28 @@ function adjustHeight(element){
                 </select>
               </div>
               <div class="form-control">
+                <label class="mb-2">
+                  <span class="ms-2">Additional Modules</span>
+                </label>
+                <select @change="onAddModule" :disabled="recalledImageId !== null || availableAdditionalModules.length === 0" v-model="selectedAdditionalModule" class="select neutral-border mb-2">
+                  <option value="" disabled selected>Select a module</option>
+                  <option v-if="availableAdditionalModules.length === 0" disabled>No available additional modules</option>
+                  <option v-for="module in availableAdditionalModules" :value="module.model_name" :key="module.model_name">{{module.model_name}}</option>
+                </select>
+              </div>
+              <div v-if="enabledAdditionalModules.length" class="mt-4 flex flex-wrap gap-2 mb-4">
+                <span v-for="module in enabledAdditionalModules" :key="module.filename" class="badge badge-lg badge-primary gap-2">
+                  <svg v-if="recalledImageId === null" @click="onRemoveModule(module.model_name)" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block h-4 w-4 stroke-current cursor-pointer">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                  {{ module.model_name }}
+                </span>
+              </div>
+              <div class="form-control">
                 <label class="cursor-pointer mb-2 mt-2">
                   <input type="checkbox" :disabled="recalledImageId !== null" v-model="imageParams.options.image_enhancements" class="checkbox checkbox-primary align-middle">
                   <span class="ms-2">Enable Image Enhancements?</span>
@@ -1355,6 +1441,12 @@ function adjustHeight(element){
                   <span class="ms-2 align-middle">CFG Scale &nbsp;</span>
                 </label>
                 <input :disabled="recalledImageId !== null" v-model="imageParams.options.cfg_scale" class="align-middle w-1/2 md:w-1/4 lg:w-1/12 neutral-border input" type="number" />
+              </div>
+              <div v-if="showAdvancedOptions" class="form-control mt-2">
+                <label class="cursor-pointer mb-2">
+                  <span class="ms-2 align-middle">Distilled CFG Scale &nbsp;</span>
+                </label>
+                <input :disabled="recalledImageId !== null" v-model="imageParams.options.distilled_cfg" class="align-middle w-1/2 md:w-1/4 lg:w-1/12 neutral-border input" type="number" />
               </div>
               <div v-if="showAdvancedOptions" class="form-control mt-2 grid grid-cols-12 gap-2">
                 <label class="cursor-pointer row col-span-12">

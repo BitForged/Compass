@@ -16,6 +16,10 @@ export function getAvailableUpscalers() {
     return request({endpoint: "api/upscalers"});
 }
 
+export function getAvailableModules() {
+    return request({ endpoint: "api/modules" });
+}
+
 export function generateTxt2Img(jobData) {
     return request({method: "POST", endpoint: "api/queue/user/txt2img", data: jobData});
 }
