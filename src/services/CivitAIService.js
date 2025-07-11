@@ -60,6 +60,13 @@ export function apiForwardRequestRaw(endpointStr) {
 
 export function getModelsByQuery(query, typeId, nsfw = true, limit = 25, searchByTag = false) {
     console.log(`Searching for models with query: ${query}, type: ${typeId}, nsfw: ${nsfw}, limit: ${limit}, searchByTag: ${searchByTag}`)
+    // HACK: Searching by name via the CivitAi API is a bit wonky right now. To get around this, allow searching by the model ID.
+    // That is, if the query is *only* numbers, then do a hit to the /models/:modelId endpoint instead.
+    // Deserves its own UI, and as such this should probably only be here temporarily - but we all know how "temporary" fixes go.
+    if (!isNaN(query) && query.length !== 0) {
+      console.warn("Query looks to be numeric - searching by Model ID instead.");
+      return apiForwardRequest({ endpoint: `models/${query}` });
+    }
     if (searchByTag) {
         if(typeId === "") {
             return apiForwardRequest({endpoint: 'models', query: {tag: query, nsfw: nsfw, limit}});

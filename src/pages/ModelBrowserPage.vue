@@ -39,6 +39,13 @@ const fetchModels = async () => {
   } else {
     getModelsByQuery(filters.value.search, filters.value.type, filters.value.nsfw).then(m => {
       console.log("Fetched models from CivitAI", m.data)
+      if (filters.value.search.length !== 0 && !isNaN(filters.value.search)) {
+        // Probably searching via model ID directly, "coerce" the data into what we're looking for - which is an array of items with a length key.
+        console.warn("Searched by Model ID? Converting data.")
+        const fakeData = { items: [m.data], length: 1}
+        m.data = fakeData
+        console.log("Faked Data: ", fakeData)
+      }
       models.value = m.data.items
       paginationData.value = m.data.metadata
       isLoading.value = false
@@ -125,7 +132,7 @@ onMounted(async () => {
         <ModelCard v-for="model in models" :key="model.id" :model="model" @on-tag-clicked="onTagClicked"
                    :blur-n-s-f-w="!filters.nsfw" :downloads-enabled="downloadsEnabled" />
       </div>
-      <div v-if="paginationData.nextPage !== undefined" class="w-fit ml-auto mr-auto mt-5">
+      <div v-if="paginationData && paginationData.nextPage !== undefined" class="w-fit ml-auto mr-auto mt-5">
         <button v-if="!isLoading" @click="onPageNext" class="btn btn-outline">Load More</button>
         <span v-else class="btn btn-outline">Loading... <span class="loading loading-spinner"></span></span>
       </div>
