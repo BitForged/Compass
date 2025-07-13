@@ -1597,17 +1597,6 @@ input[type=number] {
   appearance: textfield;
 }
 
-input[type=range] {
-  pointer-events: none;
-}
-
-input[type=range]::-webkit-slider-thumb {
-  pointer-events: auto;
-}
-input[type=range]::-moz-range-thumb {
-  pointer-events: auto;
-}
-
 textarea, textarea::placeholder {
   resize: block;
   color: #a5efa5;
