@@ -31,7 +31,7 @@ const updateAvailableLoras = async () => {
       lorasFromServer.value = loras.data
       // Initially, all loras are available
       availableLoras.value = loras.data
-      console.log("Available loras", loras).data
+      console.log("Available loras", loras.data)
     }
   } catch (e) {
     console.error("Failed to fetch loras from Navigator", e)

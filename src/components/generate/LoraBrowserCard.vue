@@ -13,7 +13,9 @@ const metadata = computed(() => {
     <figure>
       <!-- Placeholder for LoRA image -->
       <div class="w-full h-48 bg-gray-700 flex items-center justify-center">
-        <span class="text-gray-400">Sample Image</span>
+        <img v-if="metadata.images.length > 0" :src="metadata.images[0].url" alt="Sample Image" class="w-full h-full object-cover rounded-lg">
+        <span v-else class="text-gray-400">No Image Available</span>
+<!--        <span class="text-gray-400">Sample Image</span>-->
       </div>
     </figure>
     <div class="card-body p-4">

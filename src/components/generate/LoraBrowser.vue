@@ -32,16 +32,20 @@ const mergedLoras = computed(() => {
   for (let i = 0; i < loras.length; i++) {
     let metadata = {}
     // We need a few properties to be here:
-    // - Sample Image URL (Currently not in the API)
+    // - Sample Image URL (under 'images' array)
     // - LoRA's name
     // - LoRA's base model type
     // - Training words
+    // - LoRA ID + Version ID
 
-    // Attempt to fill this data from Civtai first, if the LoRA has that metadata available
+    // Attempt to fill this data from Civtai first if the LoRA has that metadata available
     if (loras[i].civitai !== undefined) {
       metadata.name = `${loras[i].civitai.model.name} (${loras[i].civitai.name})`
       metadata.base_model = loras[i].civitai.baseModel
       metadata.training_words = loras[i].civitai.trainedWords
+      metadata.images = loras[i].civitai.images ?? []
+      metadata.model_id = loras[i].civitai.modelId
+      metadata.version_id = loras[i].civitai.id
       loras[i].metadata = metadata
       continue
     }
