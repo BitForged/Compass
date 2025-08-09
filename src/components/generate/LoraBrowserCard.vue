@@ -1,7 +1,16 @@
 <script setup>
-import { computed } from 'vue';
+import {computed, ref} from 'vue';
+import VLazyImage from "v-lazy-image";
 
 const props = defineProps(['lora'])
+
+const imgFailed = ref(false)
+const imgUnavailableText = computed(() => {
+  if(imgFailed.value) {
+    return "Image Failed to Load"
+  }
+  return "No Image Available"
+})
 
 const metadata = computed(() => {
   return props.lora?.metadata
@@ -11,11 +20,9 @@ const metadata = computed(() => {
 <template>
   <div class="card bg-base-300 shadow-xl cursor-pointer hover:bg-base-200 transition-colors duration-200">
     <figure>
-      <!-- Placeholder for LoRA image -->
       <div class="w-full h-48 bg-gray-700 flex items-center justify-center">
-        <img v-if="metadata.images.length > 0" :src="metadata.images[0].url" alt="Sample Image" class="w-full h-full object-cover rounded-lg">
-        <span v-else class="text-gray-400">No Image Available</span>
-<!--        <span class="text-gray-400">Sample Image</span>-->
+        <v-lazy-image v-if="metadata.images.length > 0 && !imgFailed" @error="imgFailed = true" :src="metadata.images[0].url" alt="Sample Image" class="w-full h-full object-cover rounded-lg" />
+        <span v-else class="text-gray-400">{{imgUnavailableText}}</span>
       </div>
     </figure>
     <div class="card-body p-4">
