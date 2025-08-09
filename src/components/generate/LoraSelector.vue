@@ -1,11 +1,13 @@
 <script setup>
-import {onMounted, ref} from "vue";
+import {computed, onMounted, ref} from "vue";
 import {getAvailableLoras} from "@/services/NavigatorService";
 import LoraSelectionCard from "@/components/generate/LoraSelectionCard.vue";
 import LoraBrowser from "@/components/generate/LoraBrowser.vue";
+import {useAuthStore} from "@/stores/auth";
 
 const props = defineProps(['disabled', 'prompt', 'negativePrompt'])
-const emit = defineEmits(['onWordClicked', 'loraUpdated', 'lorasResolved'])
+const emit = defineEmits(['onWordClicked', 'loraUpdated', 'lorasResolved', 'lorasRefreshing'])
+const isRefreshing = ref(false)
 const isExpanded = ref(false)
 const lorasFromServer = ref([])
 const availableLoras = ref([])
@@ -18,14 +20,27 @@ onMounted(async () => {
   await updateAvailableLoras()
 })
 
-const updateAvailableLoras = async () => {
-  if(lorasFromServer.value.length > 0) {
+const canForceMetadataUpdate = computed(() => {
+  return useAuthStore().role >= 3
+})
+
+const onForceUpdateMetadataBtnClicked = async () => {
+  if(!canForceMetadataUpdate.value) {
+    return;
+  }
+  await updateAvailableLoras(true, true)
+}
+
+const updateAvailableLoras = async (forcedRefresh = false, forcedMetadataUpdate = false) => {
+  if(lorasFromServer.value.length > 0 && (!forcedRefresh && !forcedMetadataUpdate)) {
     console.log("Skipping update, already have available loras")
     emit("lorasResolved")
     return;
   }
   try {
-    let loras = await getAvailableLoras()
+    emit("lorasRefreshing")
+    isRefreshing.value = true
+    let loras = await getAvailableLoras(forcedMetadataUpdate)
     console.log("Fetched loras from Navigator", loras.data)
     if(loras.data.length > 0) {
       lorasFromServer.value = loras.data
@@ -33,9 +48,11 @@ const updateAvailableLoras = async () => {
       availableLoras.value = loras.data
       console.log("Available loras", loras.data)
     }
+    isRefreshing.value = false
   } catch (e) {
     console.error("Failed to fetch loras from Navigator", e)
     emit("lorasResolved")
+    isRefreshing.value = false
     return;
   }
   emit("lorasResolved")
@@ -149,8 +166,15 @@ defineExpose({
     <span v-else class="cursor-pointer" @click="isExpanded = !isExpanded">LoRA Selection</span>
     <div class="mt-2" v-show="isExpanded">
       <div class="grid grid-cols-12 gap-4 w-full">
-        <button :disabled="disabled" class="btn btn-primary col-span-8" @click="showLoraBrowser = true">Browse LoRAs</button>
-        <button :disabled="disabled" class="btn btn-error col-span-4" @click="onResetSelection">Reset Selection</button>
+        <button :disabled="disabled" class="btn btn-primary col-span-12 md:col-span-4" @click="showLoraBrowser = true">Browse LoRAs</button>
+        <div v-if="canForceMetadataUpdate" class="grid grid-cols-12 gap-4 w-full col-span-12 md:col-span-8">
+          <button :disabled="disabled || isRefreshing" class="btn btn-info col-span-6" @click="() => updateAvailableLoras(true, false)">Refresh LoRAs</button>
+          <button :disabled="disabled || isRefreshing" class="btn btn-secondary col-span-6" @click="onForceUpdateMetadataBtnClicked">Force Update Metadata</button>
+        </div>
+        <div class="grid grid-cols-12 gap-4 w-full col-span-12 md:col-span-4" v-else>
+          <button :disabled="disabled || isRefreshing" class="btn btn-info col-span-12 md:col-span-12" @click="() => updateAvailableLoras(true, false)">Refresh LoRAs</button>
+        </div>
+        <button :disabled="disabled" class="btn btn-error col-span-12 md:col-span-4" @click="onResetSelection">Reset Selection</button>
       </div>
       <div class="grid grid-cols-12 gap-4 w-full mt-3">
         <LoraSelectionCard class="col-span-12 xl:col-span-6" :class="{'md:col-span-6': enabledLoras.length > 1}" v-for="lora in enabledLoras" :key="lora.alias" :lora="lora"

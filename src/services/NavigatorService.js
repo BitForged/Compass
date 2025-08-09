@@ -67,8 +67,8 @@ export function getMetadataForImage(imageId) {
     return request({endpoint: `api/user/image/${imageId}/meta`});
 }
 
-export function getAvailableLoras() {
-    return request({endpoint: "api/models/loras"});
+export function getAvailableLoras(forceUpdateMetadata = false) {
+    return request({endpoint: `api/models/loras?force_update_metadata=${forceUpdateMetadata}`});
 }
 
 export function getLimits() {
