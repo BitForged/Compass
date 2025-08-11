@@ -20,6 +20,7 @@ import CategorySelect from "@/components/CategorySelect.vue";
 import {useSettingsStore} from "@/stores/settings";
 import LoraSelector from "@/components/generate/LoraSelector.vue";
 import SettingsView from "./SettingsView.vue";
+import EmbeddingSelector from "@/components/generate/EmbeddingSelector.vue";
 
 const router = useRouter();
 
@@ -97,6 +98,11 @@ const loraPromptAddition = ref("")
 const isShowingLoraAdditions = ref(false)
 const loraSelector = ref(null)
 const lorasResolved = ref(false)
+
+const embeddingSelector = ref(null)
+const embeddingsActivated = ref([])
+const positiveEmbeddingStr = ref("")
+const negativeEmbeddingStr = ref("")
 
 const progressClasses = computed(() => {
   if(isModelChanging.value) {
@@ -320,8 +326,8 @@ const sendJobToNavigator = () => {
     progressText.value = "Firing off request..."
     isWorking.value = true;
     let job = {
-      prompt: `${imageParams.value.options.prompt} ${loraPromptAddition.value}`,
-      negative_prompt: imageParams.value.options.negative_prompt,
+      prompt: `${positiveEmbeddingStr.value}${imageParams.value.options.prompt} ${loraPromptAddition.value}`,
+      negative_prompt: `${negativeEmbeddingStr.value}${imageParams.value.options.negative_prompt}`,
       model_name: imageParams.value.options.model.model_name,
       sampler_name: imageParams.value.options.sampler.name,
       scheduler_name: imageParams.value.options.scheduler.name,
@@ -405,6 +411,7 @@ const sendJobToNavigator = () => {
         lastJob.value = { ... job, status: 'queued', job_id: resp.data.job_id };
         isGenSettingsExpanded.value = false;
         loraSelector.value.forceCollapse();
+        embeddingSelector.value.forceCollapse();
       }).catch((error) => {
         console.error("from", error);
         useAlertStore().addAlert("Failed to send image generation request to Navigator, please try again later!", "error");
@@ -806,6 +813,8 @@ const recallJobParameters = (imageId, cb, shouldSetRecall = true, onRecallFail) 
     // Force propagate the prompt downward to LoRA related components so that they can be re-activated/reset
     //  (The LoRA activation syntax (should) always be in the positive prompt)
     loraSelector.value.forceActivateLoraFromPrompt(imageParams.value.options.prompt);
+    // Perform the same as the above, but for embeddings.
+    embeddingSelector.value.forceProcessEmbeddingTriggers(imageParams.value.options.prompt, imageParams.value.options.negative_prompt);
   }).catch((error) => {
     console.error("Failed to recall job parameters", error);
     useAlertStore().addAlert("Failed to recall job parameters, please try again later!", "error");
@@ -1111,7 +1120,7 @@ const onLoraUpdate = (loraSequences) => {
   nextTick(() => {
     let currentPrompt = imageParams.value.options.prompt;
 
-    // 1. Split the promptStr into individual LoRA entries
+    // 1. Split the sequences into individual LoRA entries
     const loraEntries = loraSequences.split(' ');
 
     // 2. Process each LoRA entry and remove it from the prompt
@@ -1142,6 +1151,84 @@ const onLoraUpdate = (loraSequences) => {
     imageParams.value.options.prompt = currentPrompt;
 
     console.log("Filtered prompt:", imageParams.value.options.prompt);
+  });
+}
+
+/**
+ * This function is similar to the `onLoraUpdate` function, but Embeddings can apply to both positive and negative prompts.
+ * The `embeddings` parameter is an array of objects containing the embedding name and the `type` which can be `off` (ignored),
+ *  `negative` (applied to the negative prompt), or `positive` (applied to the positive prompt).
+ * @param embeddings An array of embedding objects with their names and the activation types (described above).
+ */
+const onEmbeddingsUpdate = (embeddings) => {
+  embeddingsActivated.value = embeddings;
+  nextTick(() => { // Wait for the next tick to ensure that we don't run into strange race-condition issues
+    let currentPositivePrompt = imageParams.value.options.prompt;
+    let currentNegativePrompt = imageParams.value.options.negative_prompt;
+    // Used to keep track of the embedding tokens that need to be added right before sending the job to Navigator
+    let positiveEmbeddingNames = "";
+    let negativeEmbeddingNames = "";
+
+    embeddings.forEach((embedding) => {
+      if(embedding.type === "off") {
+        return; // No processing is needed, this embedding is disabled
+      }
+      const embeddingName = embedding.name;
+      const activationType = embedding.type;
+
+      // Use a single variable for processing the prompt, just so that we do not need a large if-else block for processing
+      let modifiedPrompt = embedding.type === "negative" ? currentNegativePrompt : currentPositivePrompt;
+      // Tokenize the prompt into individual phrases to check against the embedding name
+      const promptPhrases = modifiedPrompt.split(',');
+      const filteredPhrases = promptPhrases.map((phrase) => {
+        const trimmedPhrase = phrase.trim();
+        const words = trimmedPhrase.split(' ');
+        // Remove the embedding name from the prompt we're working with
+        const filteredWords = words.filter((word) => word.trim() !== embeddingName.trim());
+        return filteredWords.join(' ');
+      });
+      // Remove empty phrases from the list
+      const finalPhrases = filteredPhrases.filter((phrase) => phrase.trim() !== "");
+      // Prompts are generally comma-separated, so re-join the phrases back into a single string that is comma-separated
+      modifiedPrompt = finalPhrases.join(', ');
+      // Trim the new prompt and remove any trailing commas that might be at the end from the re-joining.
+      modifiedPrompt = modifiedPrompt.trim();
+      if (modifiedPrompt.endsWith(',')) {
+        modifiedPrompt = modifiedPrompt.slice(0, -1).trim();
+      }
+      // Determine whether we were working with the positive or negative prompt so that we can update the correct prompt
+      if(activationType === "negative") {
+        // Update the negative prompt to the new version
+        imageParams.value.options.negative_prompt = modifiedPrompt;
+        currentNegativePrompt = modifiedPrompt;
+        // Add the embedding name to the list of negative embedding tokens
+        negativeEmbeddingNames += `${embeddingName}, `;
+        console.log("[Embeddings] Negative prompt:", currentNegativePrompt);
+      } else {
+        // Update the positive prompt to the new version
+        imageParams.value.options.prompt = modifiedPrompt;
+        currentPositivePrompt = modifiedPrompt;
+        // Add the embedding name to the positive prompt
+        positiveEmbeddingNames += `${embeddingName}, `;
+        console.log("[Embeddings] Positive prompt:", currentPositivePrompt);
+      }
+    })
+    // Trim the names of the embeddings and remove any trailing commas that might be at the end
+    positiveEmbeddingNames = positiveEmbeddingNames.trim();
+    negativeEmbeddingNames = negativeEmbeddingNames.trim();
+    if (positiveEmbeddingNames.endsWith(',')) positiveEmbeddingNames = positiveEmbeddingNames.slice(0, -1).trim();
+    if (negativeEmbeddingNames.endsWith(',')) negativeEmbeddingNames = negativeEmbeddingNames.slice(0, -1).trim();
+    // Do the positive/negative prompts have any content in them? If so, then suffix a `, ` to the embedding tokens
+    //  since these will be added to the beginning of the prompts before sending the job to Navigator
+    if(currentPositivePrompt.length > 0) {
+      positiveEmbeddingNames = `${positiveEmbeddingNames}, `;
+    }
+    if(currentNegativePrompt.length > 0) {
+      negativeEmbeddingNames = `${negativeEmbeddingNames}, `;
+    }
+    console.log("[Embeddings] Updated prompt:", imageParams.value.options.prompt);
+    positiveEmbeddingStr.value = positiveEmbeddingNames;
+    negativeEmbeddingStr.value = negativeEmbeddingNames;
   });
 }
 
@@ -1267,6 +1354,7 @@ function adjustHeight(element){
             <span v-if="!isRandomized && !recalledImageId" @click="onRandomizationClick" class="m-3 mt-1 text-sm text-accent cursor-pointer">Note: You have a seed set, click to randomize this.</span>
             <span v-if="recalledImageId !== null" class="m-3 mt-1 text-sm text-error">Warning: You have a recalled image active, the prompt and other settings cannot be changed as changing the settings would cause variations to be invalid. Clear the recalled image in "Generation Settings" to unlock editing of these.</span>
             <LoraSelector ref="loraSelector" :disabled="recalledImageId !== null" :prompt="imageParams.options.prompt" :negative-prompt="imageParams.options.negative_prompt" @lorasRefreshing="lorasResolved = false" @lorasResolved="lorasResolved = true" @onWordClicked="onLoraWordClicked" @loraUpdated="onLoraUpdate" class="m-2" />
+            <EmbeddingSelector ref="embeddingSelector" class="m-2 -mt-2 p-2 rounded-md" @update:embeddings="onEmbeddingsUpdate($event)" />
             <p v-if="loraPromptAddition.length > 0 && isShowingLoraAdditions" class="text-sm italic text-gray-400 m-2" @click="isShowingLoraAdditions = !isShowingLoraAdditions">The following will automatically be appended to your prompt due to your LoRA choices: {{loraPromptAddition}}</p>
             <p v-else-if="!isShowingLoraAdditions && loraPromptAddition.length > 0" class="text-sm italic text-gray-400 m-2" @click="isShowingLoraAdditions = !isShowingLoraAdditions">LoRA text will automatically be appended to your prompt, click to show</p>
           </div>

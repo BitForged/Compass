@@ -71,6 +71,10 @@ export function getAvailableLoras(forceUpdateMetadata = false) {
     return request({endpoint: `api/models/loras?force_update_metadata=${forceUpdateMetadata}`});
 }
 
+export function getAvailableEmbeddings() {
+    return request({endpoint: "api/models/embeddings"});
+}
+
 export function getLimits() {
     return request({endpoint: "api/config/limits"});
 }
