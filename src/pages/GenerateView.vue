@@ -1220,10 +1220,10 @@ const onEmbeddingsUpdate = (embeddings) => {
     if (negativeEmbeddingNames.endsWith(',')) negativeEmbeddingNames = negativeEmbeddingNames.slice(0, -1).trim();
     // Do the positive/negative prompts have any content in them? If so, then suffix a `, ` to the embedding tokens
     //  since these will be added to the beginning of the prompts before sending the job to Navigator
-    if(currentPositivePrompt.length > 0) {
+    if(currentPositivePrompt.length > 0 && positiveEmbeddingNames.length > 0) {
       positiveEmbeddingNames = `${positiveEmbeddingNames}, `;
     }
-    if(currentNegativePrompt.length > 0) {
+    if(currentNegativePrompt.length > 0 && negativeEmbeddingNames.length > 0) {
       negativeEmbeddingNames = `${negativeEmbeddingNames}, `;
     }
     console.log("[Embeddings] Updated prompt:", imageParams.value.options.prompt);
