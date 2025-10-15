@@ -66,19 +66,27 @@ const selectLora = (lora) => {
   emit('loraSelected', lora.alias)
 }
 
+const closeOnEscape = (e) => {
+  if (e.key === 'Escape') {
+    emit('close')
+  }
+}
+
 watch(() => props.show, (newVal) => {
   const modal = document.getElementById('lora_browser_modal')
   if (newVal) {
     modal.showModal()
+    console.debug("Showing Lora Browser")
   } else {
     modal.close()
+    console.debug("Hiding Lora Browser")
   }
 })
 
 </script>
 
 <template>
-  <dialog id="lora_browser_modal" class="modal">
+  <dialog id="lora_browser_modal" class="modal" :onkeydown="closeOnEscape">
     <div class="modal-box w-11/12 max-w-5xl">
       <h3 class="font-bold text-lg">LoRA Browser</h3>
       <div class="py-4">
