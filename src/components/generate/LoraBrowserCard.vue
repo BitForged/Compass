@@ -21,7 +21,7 @@ const metadata = computed(() => {
   <div class="card bg-base-300 shadow-xl cursor-pointer hover:bg-base-200 transition-colors duration-200">
     <figure>
       <div class="w-full h-48 bg-gray-700 flex items-center justify-center">
-        <v-lazy-image v-if="metadata.images.length > 0 && !imgFailed" @error="imgFailed = true" :src="metadata.images[0].url" alt="Sample Image" class="w-full h-full object-cover rounded-lg" />
+        <v-lazy-image v-if="metadata.images?.length > 0 && !imgFailed" @error="imgFailed = true" :src="metadata.images[0].url" alt="Sample Image" class="w-full h-full object-cover rounded-lg" />
         <span v-else class="text-gray-400">{{imgUnavailableText}}</span>
       </div>
     </figure>
